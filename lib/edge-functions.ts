@@ -71,3 +71,30 @@ export function createEvent(input: CreateEventInput) {
 export function updateEvent(input: UpdateEventInput) {
   return invoke<{ event_id: string }>("update-event", input);
 }
+
+export type RegisterGuestInput = {
+  event_id: string;
+  primary_guest_name: string;
+  primary_guest_email: string;
+  primary_guest_phone?: string;
+  payment_method: "card" | "cash";
+  guests: {
+    full_name: string;
+    email?: string;
+    phone?: string;
+    line_items: { sub_event_id: string; product_id: string; quantity: number }[];
+  }[];
+  donations?: { donation_field_id?: string; amount: number }[];
+};
+
+export type RegisterGuestResponse = {
+  registration_id: string;
+  total_amount: number;
+  currency: string;
+  requires_payment: boolean;
+  client_secret?: string | null;
+};
+
+export function registerGuest(input: RegisterGuestInput) {
+  return invoke<RegisterGuestResponse>("register-guest", input);
+}
