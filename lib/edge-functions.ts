@@ -98,3 +98,39 @@ export type RegisterGuestResponse = {
 export function registerGuest(input: RegisterGuestInput) {
   return invoke<RegisterGuestResponse>("register-guest", input);
 }
+
+export type DashboardKpis = {
+  total_events: number;
+  active_events: number;
+  total_companies: number | null;
+  pending_companies: number | null;
+  total_guests: number;
+  total_registrations: number;
+  total_earnings: number;
+  total_commission: number;
+  cash_cleared: number;
+  cash_pending: number;
+};
+
+export async function getDashboardKpis(): Promise<DashboardKpis> {
+  const supabase = createClient();
+  const { data, error } = await supabase.functions.invoke<DashboardKpis>("dashboard-kpis", {
+    method: "GET",
+  });
+  if (error) throw new Error(error.message);
+  return data as DashboardKpis;
+}
+
+export function approveCompany(input: {
+  company_id: string;
+  approve: boolean;
+  rejected_reason?: string;
+}) {
+  return invoke<{ success: boolean }>("approve-company", input);
+}
+
+export function exportLeadsCsv(eventId: string) {
+  return invoke<{ url: string; expires_in_seconds: number }>("export-leads-csv", {
+    event_id: eventId,
+  });
+}

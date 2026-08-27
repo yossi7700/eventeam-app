@@ -62,22 +62,22 @@ export function EventsListClient() {
       {events && events.length > 0 && (
         <ul className="divide-y rounded-lg border">
           {events.map((event) => (
-            <li key={event.id}>
-              <Link
-                href={`/events/${event.id}/edit`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
-              >
-                <div>
-                  <p className="font-medium">{event.title}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(event.start_date).toLocaleDateString()} -{" "}
-                    {new Date(event.end_date).toLocaleDateString()}
-                  </p>
-                </div>
+            <li key={event.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+              <Link href={`/events/${event.id}/edit`} className="flex-1">
+                <p className="font-medium">{event.title}</p>
+                <p className="text-sm text-gray-500">
+                  {new Date(event.start_date).toLocaleDateString()} -{" "}
+                  {new Date(event.end_date).toLocaleDateString()}
+                </p>
+              </Link>
+              <div className="flex items-center gap-3">
+                <Link href={`/events/${event.id}/leads`} className="text-sm text-blue-600">
+                  Leads
+                </Link>
                 <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium capitalize text-gray-700">
                   {event.status}
                 </span>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>

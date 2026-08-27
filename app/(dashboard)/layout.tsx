@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,10 +32,25 @@ export default async function DashboardLayout({
     redirect("/pending-approval?status=rejected");
   }
 
+  const isAdmin = profile?.role === "admin";
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b px-6 py-4">
+      <header className="flex items-center gap-6 border-b px-6 py-4">
         <span className="font-semibold">EvenTeam</span>
+        <nav className="flex gap-4 text-sm">
+          <Link href="/dashboard" className="text-gray-600 hover:text-black">
+            Dashboard
+          </Link>
+          <Link href="/events" className="text-gray-600 hover:text-black">
+            Events
+          </Link>
+          {isAdmin && (
+            <Link href="/companies" className="text-gray-600 hover:text-black">
+              Companies
+            </Link>
+          )}
+        </nav>
       </header>
       <main className="flex-1 p-6">{children}</main>
     </div>
