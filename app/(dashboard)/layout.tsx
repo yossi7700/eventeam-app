@@ -45,6 +45,12 @@ export default async function DashboardLayout({
           <Link href="/events" className="text-gray-600 hover:text-black">
             Events
           </Link>
+          <Link href="/templates" className="text-gray-600 hover:text-black">
+            Templates
+          </Link>
+          <Link href="/email-templates" className="text-gray-600 hover:text-black">
+            Email Templates
+          </Link>
           {isAdmin && (
             <Link href="/companies" className="text-gray-600 hover:text-black">
               Companies

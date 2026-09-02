@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createServiceClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { createServiceClient, errorResponse, invokeEmailFunction, jsonResponse } from "../_shared/supabase.ts";
 import { getStripeClient } from "../_shared/stripe.ts";
 
 type LineItemInput = {
@@ -86,6 +86,27 @@ Deno.serve(async (req: Request) => {
   };
 
   if (body.payment_method === "cash") {
+    // Cash needs no Stripe confirmation step, so the registration is
+    // final immediately -- fire the confirmation email now rather than
+    // waiting on a webhook that will never come for this payment method.
+    const { data: cashEvent } = await supabase
+      .from("events")
+      .select("company_id, title")
+      .eq("id", body.event_id)
+      .single();
+
+    await invokeEmailFunction(
+      "registration_confirmation",
+      body.primary_guest_email,
+      cashEvent?.company_id ?? null,
+      {
+        guest_name: body.primary_guest_name,
+        event_title: cashEvent?.title ?? "",
+        total_amount: String(total_amount),
+        currency,
+      }
+    );
+
     return jsonResponse({ registration_id, total_amount, currency, requires_payment: false });
   }
 

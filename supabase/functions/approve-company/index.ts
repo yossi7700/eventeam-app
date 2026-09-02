@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createUserClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { createUserClient, errorResponse, invokeEmailFunction, jsonResponse } from "../_shared/supabase.ts";
 
 type ApproveCompanyInput = {
   company_id: string;
@@ -41,6 +41,24 @@ Deno.serve(async (req: Request) => {
   if (error) {
     const status = error.code === "42501" ? 403 : 400;
     return errorResponse(error.message, status);
+  }
+
+  const { data: company } = await supabase
+    .from("companies")
+    .select("name, contact_email")
+    .eq("id", body.company_id)
+    .maybeSingle();
+
+  if (company) {
+    await invokeEmailFunction(
+      body.approve ? "company_approved" : "company_rejected",
+      company.contact_email,
+      body.company_id,
+      {
+        company_name: company.name,
+        rejected_reason: body.rejected_reason ?? "",
+      }
+    );
   }
 
   return jsonResponse({ success: true });

@@ -31,3 +31,30 @@ export function jsonResponse(body: unknown, status = 200): Response {
 export function errorResponse(message: string, status = 400): Response {
   return jsonResponse({ error: message }, status);
 }
+
+// Server-to-server invocation of another Edge Function using the project's
+// own service role key. Failures are swallowed to a console.error rather
+// than thrown -- a confirmation email failing to send should never fail
+// the registration/approval flow that triggered it.
+export async function invokeEmailFunction(
+  kind: string,
+  to: string,
+  companyId: string | null,
+  variables: Record<string, string>
+): Promise<void> {
+  try {
+    const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ kind, to, company_id: companyId, variables }),
+    });
+    if (!response.ok) {
+      console.error(`send-email failed (${response.status}): ${await response.text()}`);
+    }
+  } catch (err) {
+    console.error(`send-email invocation failed: ${(err as Error).message}`);
+  }
+}

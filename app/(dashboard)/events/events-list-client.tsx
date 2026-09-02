@@ -71,6 +71,9 @@ export function EventsListClient() {
                 </p>
               </Link>
               <div className="flex items-center gap-3">
+                <Link href={`/events/${event.id}/donations`} className="text-sm text-blue-600">
+                  Donations
+                </Link>
                 <Link href={`/events/${event.id}/leads`} className="text-sm text-blue-600">
                   Leads
                 </Link>

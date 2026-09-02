@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createServiceClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { createServiceClient, errorResponse, invokeEmailFunction, jsonResponse } from "../_shared/supabase.ts";
 import { getStripeClient, getStripeWebhookSecret } from "../_shared/stripe.ts";
 import type Stripe from "npm:stripe@22";
 
@@ -46,10 +46,32 @@ Deno.serve(async (req: Request) => {
         .eq("stripe_payment_intent_id", pi.id);
 
       if (registrationId) {
-        await supabase
+        const { data: registration } = await supabase
           .from("registrations")
           .update({ status: "confirmed" })
-          .eq("id", registrationId);
+          .eq("id", registrationId)
+          .select("primary_guest_name, primary_guest_email, total_amount, currency, event_id")
+          .single();
+
+        if (registration) {
+          const { data: registrationEvent } = await supabase
+            .from("events")
+            .select("company_id, title")
+            .eq("id", registration.event_id)
+            .single();
+
+          await invokeEmailFunction(
+            "registration_confirmation",
+            registration.primary_guest_email,
+            registrationEvent?.company_id ?? null,
+            {
+              guest_name: registration.primary_guest_name,
+              event_title: registrationEvent?.title ?? "",
+              total_amount: String(registration.total_amount),
+              currency: registration.currency,
+            }
+          );
+        }
       }
       break;
     }

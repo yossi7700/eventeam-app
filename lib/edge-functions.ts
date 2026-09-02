@@ -134,3 +134,16 @@ export function exportLeadsCsv(eventId: string) {
     event_id: eventId,
   });
 }
+
+export type PublishTemplateInput = {
+  template_event_id: string;
+  target_date: string;
+  slug: string;
+  geonameid?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+export function publishTemplateEvent(input: PublishTemplateInput) {
+  return invoke<{ event_id: string }>("publish-template-event", input);
+}
