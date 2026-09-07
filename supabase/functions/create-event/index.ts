@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createUserClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 type ProductInput = {
   name: string;
@@ -36,21 +37,25 @@ type CreateEventInput = {
 };
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return errorResponse("method not allowed", 405);
+    return errorResponse("method not allowed", 405, corsHeaders);
   }
 
   let body: CreateEventInput;
   try {
     body = await req.json();
   } catch {
-    return errorResponse("invalid JSON body", 400);
+    return errorResponse("invalid JSON body", 400, corsHeaders);
   }
 
   if (!body.company_id || !body.title || !body.slug || !body.start_date || !body.end_date) {
     return errorResponse(
       "company_id, title, slug, start_date, and end_date are required",
-      422
+      422,
+      corsHeaders
     );
   }
 
@@ -70,8 +75,8 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     const status = error.code === "42501" ? 403 : 400;
-    return errorResponse(error.message, status);
+    return errorResponse(error.message, status, corsHeaders);
   }
 
-  return jsonResponse({ event_id: data }, 201);
+  return jsonResponse({ event_id: data }, 201, corsHeaders);
 });

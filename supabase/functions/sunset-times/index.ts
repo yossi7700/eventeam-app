@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 // Wraps hebcal.com's public Zmanim (halachic times) API. Used by
 // publish-template-event to compute sub-event start times relative to
@@ -19,8 +20,11 @@ type SunsetTimesInput = {
 };
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   if (req.method !== "GET" && req.method !== "POST") {
-    return errorResponse("method not allowed", 405);
+    return errorResponse("method not allowed", 405, corsHeaders);
   }
 
   let input: SunsetTimesInput;
@@ -41,15 +45,15 @@ Deno.serve(async (req: Request) => {
     try {
       input = await req.json();
     } catch {
-      return errorResponse("invalid JSON body", 400);
+      return errorResponse("invalid JSON body", 400, corsHeaders);
     }
   }
 
   if (!input.date) {
-    return errorResponse("date (YYYY-MM-DD) is required", 422);
+    return errorResponse("date (YYYY-MM-DD) is required", 422, corsHeaders);
   }
   if (!input.geonameid && (input.latitude == null || input.longitude == null)) {
-    return errorResponse("either geonameid or latitude+longitude is required", 422);
+    return errorResponse("either geonameid or latitude+longitude is required", 422, corsHeaders);
   }
 
   const hebcalUrl = new URL("https://www.hebcal.com/zmanim");
@@ -70,14 +74,18 @@ Deno.serve(async (req: Request) => {
     }
     const data = await response.json();
 
-    return jsonResponse({
-      date: input.date,
-      sunset: data.times?.sunset ?? null,
-      candle_lighting: data.times?.candlelighting ?? null,
-      havdalah: data.times?.havdalah ?? null,
-      raw: data.times ?? null,
-    });
+    return jsonResponse(
+      {
+        date: input.date,
+        sunset: data.times?.sunset ?? null,
+        candle_lighting: data.times?.candlelighting ?? null,
+        havdalah: data.times?.havdalah ?? null,
+        raw: data.times ?? null,
+      },
+      200,
+      corsHeaders
+    );
   } catch (err) {
-    return errorResponse(`failed to fetch sunset times: ${(err as Error).message}`, 502);
+    return errorResponse(`failed to fetch sunset times: ${(err as Error).message}`, 502, corsHeaders);
   }
 });

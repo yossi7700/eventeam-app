@@ -37,6 +37,16 @@ Deno.serve(async (req: Request) => {
       const pi = event.data.object as Stripe.PaymentIntent;
       const registrationId = pi.metadata?.registration_id;
 
+      // Stripe can and does redeliver the same event (retries on any
+      // non-2xx response or timeout, and sometimes just duplicates
+      // delivery) -- the DB writes below are naturally idempotent (setting
+      // the same status twice is a no-op in effect), but sending the
+      // confirmation email is NOT: doing it unconditionally on every
+      // delivery would email the guest once per redelivery. Guard it by
+      // only firing when this call is the one that actually transitions
+      // the registration into "confirmed" -- `.eq("status", "pending")` in
+      // the update means a second delivery (registration already
+      // confirmed) matches zero rows and skips the email.
       await supabase
         .from("guest_payments")
         .update({
@@ -50,8 +60,9 @@ Deno.serve(async (req: Request) => {
           .from("registrations")
           .update({ status: "confirmed" })
           .eq("id", registrationId)
+          .eq("status", "pending")
           .select("primary_guest_name, primary_guest_email, total_amount, currency, event_id")
-          .single();
+          .maybeSingle();
 
         if (registration) {
           const { data: registrationEvent } = await supabase

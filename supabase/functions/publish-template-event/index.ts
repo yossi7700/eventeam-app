@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createServiceClient, createUserClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 type PublishTemplateInput = {
   template_event_id: string;
@@ -11,22 +12,25 @@ type PublishTemplateInput = {
 };
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return errorResponse("method not allowed", 405);
+    return errorResponse("method not allowed", 405, corsHeaders);
   }
 
   let body: PublishTemplateInput;
   try {
     body = await req.json();
   } catch {
-    return errorResponse("invalid JSON body", 400);
+    return errorResponse("invalid JSON body", 400, corsHeaders);
   }
 
   if (!body.template_event_id || !body.target_date || !body.slug) {
-    return errorResponse("template_event_id, target_date, and slug are required", 422);
+    return errorResponse("template_event_id, target_date, and slug are required", 422, corsHeaders);
   }
   if (!body.geonameid && (body.latitude == null || body.longitude == null)) {
-    return errorResponse("either geonameid or latitude+longitude is required", 422);
+    return errorResponse("either geonameid or latitude+longitude is required", 422, corsHeaders);
   }
 
   const userClient = createUserClient(req);
@@ -35,7 +39,7 @@ Deno.serve(async (req: Request) => {
   } = await userClient.auth.getUser();
 
   if (!user) {
-    return errorResponse("authentication required", 401);
+    return errorResponse("authentication required", 401, corsHeaders);
   }
 
   const { data: company } = await userClient
@@ -45,7 +49,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (!company) {
-    return errorResponse("no company found for this account", 404);
+    return errorResponse("no company found for this account", 404, corsHeaders);
   }
 
   // Companies can read master template events via RLS (see the "events:
@@ -60,7 +64,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (!template) {
-    return errorResponse("template event not found", 404);
+    return errorResponse("template event not found", 404, corsHeaders);
   }
 
   type TemplateSubEvent = {
@@ -101,13 +105,18 @@ Deno.serve(async (req: Request) => {
     if (!sunsetResponse.ok) {
       return errorResponse(
         `could not compute sunset time for the target date/location: ${await sunsetResponse.text()}`,
-        502
+        502,
+        corsHeaders
       );
     }
 
     const sunsetData = await sunsetResponse.json();
     if (!sunsetData.sunset) {
-      return errorResponse("sunset-times returned no sunset value for this date/location", 502);
+      return errorResponse(
+        "sunset-times returned no sunset value for this date/location",
+        502,
+        corsHeaders
+      );
     }
     sunsetTime = new Date(sunsetData.sunset);
   }
@@ -157,7 +166,7 @@ Deno.serve(async (req: Request) => {
   });
 
   if (error) {
-    return errorResponse(error.message, 400);
+    return errorResponse(error.message, 400, corsHeaders);
   }
 
   // Mark the new event as published-from-template and link back to the
@@ -168,5 +177,5 @@ Deno.serve(async (req: Request) => {
     .update({ source: "published_from_template", template_id: body.template_event_id })
     .eq("id", newEventId);
 
-  return jsonResponse({ event_id: newEventId });
+  return jsonResponse({ event_id: newEventId }, 200, corsHeaders);
 });

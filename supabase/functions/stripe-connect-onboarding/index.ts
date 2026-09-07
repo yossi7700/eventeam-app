@@ -1,18 +1,22 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createServiceClient, createUserClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
 import { getStripeClient, getStripeConnectClientId } from "../_shared/stripe.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 // GET  ?action=authorize-url   -> returns the Stripe Connect OAuth URL to redirect the company to
 // POST { code }                -> exchanges the OAuth code for a connected account id
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   const supabase = createUserClient(req);
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return errorResponse("authentication required", 401);
+    return errorResponse("authentication required", 401, corsHeaders);
   }
 
   const { data: company } = await supabase
@@ -22,27 +26,28 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (!company) {
-    return errorResponse("no company found for this account", 404);
+    return errorResponse("no company found for this account", 404, corsHeaders);
   }
 
   if (req.method === "GET") {
     const url = new URL(req.url);
     if (url.searchParams.get("action") !== "authorize-url") {
-      return errorResponse("unsupported action", 400);
+      return errorResponse("unsupported action", 400, corsHeaders);
     }
 
     let clientId: string;
     try {
       clientId = getStripeConnectClientId();
     } catch (err) {
-      return errorResponse((err as Error).message, 503);
+      return errorResponse((err as Error).message, 503, corsHeaders);
     }
 
     const redirectUri = Deno.env.get("STRIPE_CONNECT_REDIRECT_URI");
     if (!redirectUri) {
       return errorResponse(
         "STRIPE_CONNECT_REDIRECT_URI is not configured. Set it with `supabase secrets set STRIPE_CONNECT_REDIRECT_URI=https://.../settings/payment`.",
-        503
+        503,
+        corsHeaders
       );
     }
 
@@ -53,7 +58,7 @@ Deno.serve(async (req: Request) => {
     authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("state", company.id);
 
-    return jsonResponse({ url: authorizeUrl.toString() });
+    return jsonResponse({ url: authorizeUrl.toString() }, 200, corsHeaders);
   }
 
   if (req.method === "POST") {
@@ -61,18 +66,18 @@ Deno.serve(async (req: Request) => {
     try {
       body = await req.json();
     } catch {
-      return errorResponse("invalid JSON body", 400);
+      return errorResponse("invalid JSON body", 400, corsHeaders);
     }
 
     if (!body.code) {
-      return errorResponse("code is required", 422);
+      return errorResponse("code is required", 422, corsHeaders);
     }
 
     let stripe;
     try {
       stripe = getStripeClient();
     } catch (err) {
-      return errorResponse((err as Error).message, 503);
+      return errorResponse((err as Error).message, 503, corsHeaders);
     }
 
     try {
@@ -98,11 +103,11 @@ Deno.serve(async (req: Request) => {
         connected_at: new Date().toISOString(),
       });
 
-      return jsonResponse({ connected: true, stripe_account_id: response.stripe_user_id });
+      return jsonResponse({ connected: true, stripe_account_id: response.stripe_user_id }, 200, corsHeaders);
     } catch (err) {
-      return errorResponse(`Stripe Connect onboarding failed: ${(err as Error).message}`, 502);
+      return errorResponse(`Stripe Connect onboarding failed: ${(err as Error).message}`, 502, corsHeaders);
     }
   }
 
-  return errorResponse("method not allowed", 405);
+  return errorResponse("method not allowed", 405, corsHeaders);
 });

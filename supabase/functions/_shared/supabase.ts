@@ -21,15 +21,15 @@ export function createServiceClient(): SupabaseClient {
   );
 }
 
-export function jsonResponse(body: unknown, status = 200): Response {
+export function jsonResponse(body: unknown, status = 200, extraHeaders?: HeadersInit): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extraHeaders },
   });
 }
 
-export function errorResponse(message: string, status = 400): Response {
-  return jsonResponse({ error: message }, status);
+export function errorResponse(message: string, status = 400, extraHeaders?: HeadersInit): Response {
+  return jsonResponse({ error: message }, status, extraHeaders);
 }
 
 // Server-to-server invocation of another Edge Function using the project's

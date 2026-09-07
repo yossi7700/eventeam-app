@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createServiceClient, errorResponse, invokeEmailFunction, jsonResponse } from "../_shared/supabase.ts";
 import { getStripeClient } from "../_shared/stripe.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 type LineItemInput = {
   sub_event_id: string;
@@ -31,15 +32,18 @@ type RegisterGuestInput = {
 };
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return errorResponse("method not allowed", 405);
+    return errorResponse("method not allowed", 405, corsHeaders);
   }
 
   let body: RegisterGuestInput;
   try {
     body = await req.json();
   } catch {
-    return errorResponse("invalid JSON body", 400);
+    return errorResponse("invalid JSON body", 400, corsHeaders);
   }
 
   if (
@@ -51,7 +55,8 @@ Deno.serve(async (req: Request) => {
   ) {
     return errorResponse(
       "event_id, primary_guest_name, primary_guest_email, payment_method, and at least one guest are required",
-      422
+      422,
+      corsHeaders
     );
   }
 
@@ -76,7 +81,7 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     const status = error.code === "P0002" ? 404 : error.code === "P0001" ? 409 : 400;
-    return errorResponse(error.message, status);
+    return errorResponse(error.message, status, corsHeaders);
   }
 
   const { registration_id, total_amount, currency } = data as {
@@ -107,7 +112,11 @@ Deno.serve(async (req: Request) => {
       }
     );
 
-    return jsonResponse({ registration_id, total_amount, currency, requires_payment: false });
+    return jsonResponse(
+      { registration_id, total_amount, currency, requires_payment: false },
+      200,
+      corsHeaders
+    );
   }
 
   // Card payment: create a Stripe PaymentIntent and return its client_secret
@@ -169,15 +178,20 @@ Deno.serve(async (req: Request) => {
       `Registration was recorded but payment could not be initialized: ${
         (stripeError as Error).message
       }`,
-      502
+      502,
+      corsHeaders
     );
   }
 
-  return jsonResponse({
-    registration_id,
-    total_amount,
-    currency,
-    requires_payment: true,
-    client_secret: clientSecret,
-  });
+  return jsonResponse(
+    {
+      registration_id,
+      total_amount,
+      currency,
+      requires_payment: true,
+      client_secret: clientSecret,
+    },
+    200,
+    corsHeaders
+  );
 });

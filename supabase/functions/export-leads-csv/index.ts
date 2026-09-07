@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createServiceClient, createUserClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 type ExportInput = {
   event_id: string;
@@ -14,19 +15,22 @@ function csvEscape(value: unknown): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return errorResponse("method not allowed", 405);
+    return errorResponse("method not allowed", 405, corsHeaders);
   }
 
   let body: ExportInput;
   try {
     body = await req.json();
   } catch {
-    return errorResponse("invalid JSON body", 400);
+    return errorResponse("invalid JSON body", 400, corsHeaders);
   }
 
   if (!body.event_id) {
-    return errorResponse("event_id is required", 422);
+    return errorResponse("event_id is required", 422, corsHeaders);
   }
 
   // Read as the calling user so RLS enforces they can only export leads for
@@ -37,7 +41,7 @@ Deno.serve(async (req: Request) => {
   } = await userClient.auth.getUser();
 
   if (!user) {
-    return errorResponse("authentication required", 401);
+    return errorResponse("authentication required", 401, corsHeaders);
   }
 
   const { data: registrations, error } = await userClient
@@ -53,11 +57,15 @@ Deno.serve(async (req: Request) => {
     .eq("event_id", body.event_id);
 
   if (error) {
-    return errorResponse(error.message, 400);
+    return errorResponse(error.message, 400, corsHeaders);
   }
 
   if (!registrations || registrations.length === 0) {
-    return jsonResponse({ error: "No registrations found for this event, or you do not have access to it." }, 404);
+    return jsonResponse(
+      { error: "No registrations found for this event, or you do not have access to it." },
+      404,
+      corsHeaders
+    );
   }
 
   const rows: string[] = [
@@ -176,7 +184,7 @@ Deno.serve(async (req: Request) => {
     .upload(path, new Blob([csv], { type: "text/csv" }), { contentType: "text/csv" });
 
   if (uploadError) {
-    return errorResponse(`failed to generate export: ${uploadError.message}`, 500);
+    return errorResponse(`failed to generate export: ${uploadError.message}`, 500, corsHeaders);
   }
 
   const { data: signedUrlData, error: signedUrlError } = await serviceClient.storage
@@ -186,9 +194,14 @@ Deno.serve(async (req: Request) => {
   if (signedUrlError || !signedUrlData) {
     return errorResponse(
       `export generated but failed to create a download link: ${signedUrlError?.message}`,
-      500
+      500,
+      corsHeaders
     );
   }
 
-  return jsonResponse({ url: signedUrlData.signedUrl, expires_in_seconds: 300 });
+  return jsonResponse(
+    { url: signedUrlData.signedUrl, expires_in_seconds: 300 },
+    200,
+    corsHeaders
+  );
 });

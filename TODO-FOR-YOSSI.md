@@ -1,6 +1,6 @@
 # פעולות נדרשות ממך — EvenTeam Rebuild
 
-קובץ זה מתעדכן באופן שוטף עם כל דבר שאני לא יכול להשלים בעצמי — בעיקר מפתחות/סודות, החלטות עסקיות, ואישורים חיצוניים. עדכון אחרון: Phase 6 (הגדרות + OTP) הושלם.
+קובץ זה מתעדכן באופן שוטף עם כל דבר שאני לא יכול להשלים בעצמי — בעיקר מפתחות/סודות, החלטות עסקיות, ואישורים חיצוניים. עדכון אחרון: **כל 7 השלבים בתוכנית הושלמו**.
 
 ---
 
@@ -23,6 +23,11 @@
   ```
 - [ ] להביא לי את **מפתח ה-publishable** (pk_test_...) כדי לעדכן ב-`.env.local` את `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (וב-Vercel כשנפרוס)
 
+### 1.5 CORS — דומיין הפרודקשן (חדש ב-Phase 7)
+תיקנתי באג אמיתי: כל ה-Edge Functions לא טיפלו כלל ב-preflight requests (OPTIONS) — כלומר **כל קריאה מהדפדפן הייתה נכשלת** (לא רק מ-origin לא מורשה — מכל origin, כולל שלנו). זה תוקן עם רשימת origins מורשים מפורשת (במקום ה-`*` הפתוח של המערכת הישנה). כרגע `localhost` בפיתוח עובד אוטומטית.
+- [ ] כשיהיה לך דומיין production (Vercel/eventeam.online), תגיד לי ואני ארוץ:
+  `supabase secrets set ALLOWED_ORIGINS=https://your-domain.com,https://your-app.vercel.app`
+
 ### 2. Resend (שליחת אימיילים)
 כרגע כל שליחת מייל נכשלת בצורה מבוקרת ("not configured").
 
@@ -35,6 +40,12 @@
 
 ### 3. ~~גישת Supabase CLI~~ ✅ הושלם
 ה-CLI כבר היה מחובר אצלך (`supabase login` בוצע בעבר), רק חיברתי (`link`) אותו לפרויקט הזה. אני יכול להריץ migrations/secrets/deploy ישירות מהטרמינל בלי תלות ב-MCP tool מעכשיו.
+
+### 4. פריסה ל-Vercel
+ה-frontend עדיין לא פרוס בשום מקום — רץ רק מקומית. כדי לפרוס:
+- [ ] לחבר את הריפו `yossi7700/eventeam-app` ל-Vercel (חשבון Vercel קיים? צריך ליצור?)
+- [ ] להגדיר ב-Vercel את משתני הסביבה מ-`.env.local`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- [ ] אחרי שתדע את כתובת הדומיין הסופית — לעדכן את `ALLOWED_ORIGINS` (סעיף 1.5) ואת `STRIPE_CONNECT_REDIRECT_URI` (סעיף 1) בהתאם
 
 ---
 
@@ -50,7 +61,7 @@
 
 - **Supabase project**: `eventeam` (`nauyrqtdlqdqyxgrdlex`), `eu-central-1`, ~$10/חודש
 - **GitHub repo**: `yossi7700/eventeam-app`
-- **סטטוס**: Phase 6 מתוך 7 הושלם (הגדרות חברה/פרופיל, פעולות מוגנות-OTP לשינוי סיסמה ואחוז עמלה, יומן ביקורת admin). נשאר Phase 7 (הקשחה סופית).
+- **סטטוס**: **כל 7 השלבים הושלמו.** שכבת ה-backend/frontend מלאה ונבדקה. מה שנשאר זה בעיקר המפתחות האדומים למעלה + פריסה בפועל ל-Vercel.
 - קוד ה-Laravel/MySQL הישן נשאר **ללא שינוי** — לא נגעתי בו כלל, כמבוקש.
 
 ---

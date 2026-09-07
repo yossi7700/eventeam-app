@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createServiceClient, createUserClient, errorResponse, jsonResponse } from "../_shared/supabase.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 type VerifyOtpInput = {
   purpose: "change_stripe_keys" | "change_commission_rate" | "change_password" | "change_email";
@@ -11,19 +12,22 @@ type VerifyOtpInput = {
 };
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return errorResponse("method not allowed", 405);
+    return errorResponse("method not allowed", 405, corsHeaders);
   }
 
   let body: VerifyOtpInput;
   try {
     body = await req.json();
   } catch {
-    return errorResponse("invalid JSON body", 400);
+    return errorResponse("invalid JSON body", 400, corsHeaders);
   }
 
   if (!body.purpose || !body.code) {
-    return errorResponse("purpose and code are required", 422);
+    return errorResponse("purpose and code are required", 422, corsHeaders);
   }
 
   const userClient = createUserClient(req);
@@ -32,7 +36,7 @@ Deno.serve(async (req: Request) => {
   } = await userClient.auth.getUser();
 
   if (!user) {
-    return errorResponse("authentication required", 401);
+    return errorResponse("authentication required", 401, corsHeaders);
   }
 
   // Verification runs under the caller's own JWT (RLS-equivalent scoping
@@ -45,11 +49,11 @@ Deno.serve(async (req: Request) => {
 
   if (verifyError) {
     const status = verifyError.code === "P0002" ? 404 : verifyError.code === "P0001" ? 409 : 400;
-    return errorResponse(verifyError.message, status);
+    return errorResponse(verifyError.message, status, corsHeaders);
   }
 
   if (!verified) {
-    return errorResponse("incorrect code", 401);
+    return errorResponse("incorrect code", 401, corsHeaders);
   }
 
   // The code checked out -- perform the actual gated mutation now, using
@@ -60,29 +64,29 @@ Deno.serve(async (req: Request) => {
   switch (body.purpose) {
     case "change_password": {
       if (!body.new_password || body.new_password.length < 8) {
-        return errorResponse("new_password (min 8 characters) is required", 422);
+        return errorResponse("new_password (min 8 characters) is required", 422, corsHeaders);
       }
       const { error } = await serviceClient.auth.admin.updateUserById(user.id, {
         password: body.new_password,
       });
-      if (error) return errorResponse(error.message, 500);
+      if (error) return errorResponse(error.message, 500, corsHeaders);
       break;
     }
 
     case "change_email": {
       if (!body.new_email) {
-        return errorResponse("new_email is required", 422);
+        return errorResponse("new_email is required", 422, corsHeaders);
       }
       const { error } = await serviceClient.auth.admin.updateUserById(user.id, {
         email: body.new_email,
       });
-      if (error) return errorResponse(error.message, 500);
+      if (error) return errorResponse(error.message, 500, corsHeaders);
       break;
     }
 
     case "change_commission_rate": {
       if (body.new_commission_pct == null || body.new_commission_pct < 0 || body.new_commission_pct > 100) {
-        return errorResponse("new_commission_pct (0-100) is required", 422);
+        return errorResponse("new_commission_pct (0-100) is required", 422, corsHeaders);
       }
       const { data: company } = await serviceClient
         .from("companies")
@@ -90,13 +94,13 @@ Deno.serve(async (req: Request) => {
         .eq("profile_id", user.id)
         .maybeSingle();
       if (!company) {
-        return errorResponse("no company found for this account", 404);
+        return errorResponse("no company found for this account", 404, corsHeaders);
       }
       const { error } = await serviceClient
         .from("company_settings")
         .update({ admin_commission_pct: body.new_commission_pct })
         .eq("company_id", company.id);
-      if (error) return errorResponse(error.message, 500);
+      if (error) return errorResponse(error.message, 500, corsHeaders);
 
       await serviceClient.from("audit_logs").insert({
         actor_profile_id: user.id,
@@ -124,5 +128,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  return jsonResponse({ verified: true, purpose: body.purpose });
+  return jsonResponse({ verified: true, purpose: body.purpose }, 200, corsHeaders);
 });

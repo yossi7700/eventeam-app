@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createServiceClient, createUserClient, errorResponse, invokeEmailFunction, jsonResponse } from "../_shared/supabase.ts";
+import { handleCors } from "../_shared/cors.ts";
 
 type RequestOtpInput = {
   purpose: "change_stripe_keys" | "change_commission_rate" | "change_password" | "change_email";
@@ -24,15 +25,18 @@ function generateOtp(): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const { preflight, headers: corsHeaders } = handleCors(req);
+  if (preflight) return preflight;
+
   if (req.method !== "POST") {
-    return errorResponse("method not allowed", 405);
+    return errorResponse("method not allowed", 405, corsHeaders);
   }
 
   let body: RequestOtpInput;
   try {
     body = await req.json();
   } catch {
-    return errorResponse("invalid JSON body", 400);
+    return errorResponse("invalid JSON body", 400, corsHeaders);
   }
 
   const validPurposes = [
@@ -42,7 +46,7 @@ Deno.serve(async (req: Request) => {
     "change_email",
   ];
   if (!body.purpose || !validPurposes.includes(body.purpose)) {
-    return errorResponse(`purpose must be one of: ${validPurposes.join(", ")}`, 422);
+    return errorResponse(`purpose must be one of: ${validPurposes.join(", ")}`, 422, corsHeaders);
   }
 
   const userClient = createUserClient(req);
@@ -51,7 +55,7 @@ Deno.serve(async (req: Request) => {
   } = await userClient.auth.getUser();
 
   if (!user) {
-    return errorResponse("authentication required", 401);
+    return errorResponse("authentication required", 401, corsHeaders);
   }
 
   const serviceClient = createServiceClient();
@@ -78,7 +82,7 @@ Deno.serve(async (req: Request) => {
   });
 
   if (error) {
-    return errorResponse(error.message, 500);
+    return errorResponse(error.message, 500, corsHeaders);
   }
 
   const { data: profile } = await serviceClient
@@ -100,8 +104,9 @@ Deno.serve(async (req: Request) => {
     // email failure to change the response shape here.
   });
 
-  return jsonResponse({
-    requested: true,
-    expires_in_seconds: OTP_TTL_MINUTES * 60,
-  });
+  return jsonResponse(
+    { requested: true, expires_in_seconds: OTP_TTL_MINUTES * 60 },
+    200,
+    corsHeaders
+  );
 });
