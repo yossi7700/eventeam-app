@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Tables } from "@/types/supabase";
+import type { Tables, TablesUpdate } from "@/types/supabase";
 
 export type ProfileWithCompany = Tables<"profiles"> & {
   companies: Tables<"companies"> | null;
@@ -28,4 +28,25 @@ export async function getMyProfile(): Promise<ProfileWithCompany | null> {
 
   if (error) throw new Error(error.message);
   return data as ProfileWithCompany | null;
+}
+
+export async function updateMyProfile(
+  patch: Pick<TablesUpdate<"profiles">, "full_name" | "phone">
+): Promise<Tables<"profiles">> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("not authenticated");
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(patch)
+    .eq("id", user.id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
 }

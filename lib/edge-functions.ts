@@ -147,3 +147,25 @@ export type PublishTemplateInput = {
 export function publishTemplateEvent(input: PublishTemplateInput) {
   return invoke<{ event_id: string }>("publish-template-event", input);
 }
+
+export type OtpPurpose =
+  | "change_stripe_keys"
+  | "change_commission_rate"
+  | "change_password"
+  | "change_email";
+
+export function requestOtp(purpose: OtpPurpose) {
+  return invoke<{ requested: boolean; expires_in_seconds: number }>("request-otp", { purpose });
+}
+
+export type VerifyOtpInput = {
+  purpose: OtpPurpose;
+  code: string;
+  new_password?: string;
+  new_email?: string;
+  new_commission_pct?: number;
+};
+
+export function verifyOtp(input: VerifyOtpInput) {
+  return invoke<{ verified: boolean; purpose: OtpPurpose }>("verify-otp", input);
+}

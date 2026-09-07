@@ -56,6 +56,14 @@ export default async function DashboardLayout({
               Companies
             </Link>
           )}
+          {isAdmin && (
+            <Link href="/audit-log" className="text-gray-600 hover:text-black">
+              Audit Log
+            </Link>
+          )}
+          <Link href="/settings/profile" className="text-gray-600 hover:text-black">
+            Settings
+          </Link>
         </nav>
       </header>
       <main className="flex-1 p-6">{children}</main>
