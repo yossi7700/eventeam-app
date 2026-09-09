@@ -1,22 +1,15 @@
-import Link from "next/link";
+import { SettingsNav } from "./settings-nav";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="space-y-6">
-      <nav className="flex gap-4 border-b pb-3 text-sm">
-        <Link href="/settings/profile" className="text-gray-600 hover:text-black">
-          Profile
-        </Link>
-        <Link href="/settings/company" className="text-gray-600 hover:text-black">
-          Company
-        </Link>
-        <Link href="/settings/payment" className="text-gray-600 hover:text-black">
-          Payment
-        </Link>
-        <Link href="/settings/security" className="text-gray-600 hover:text-black">
-          Security
-        </Link>
-      </nav>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage your profile, company, payments, and security.
+        </p>
+      </div>
+      <SettingsNav />
       {children}
     </div>
   );

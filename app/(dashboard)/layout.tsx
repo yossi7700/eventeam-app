@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { LogoutButton } from "@/components/logout-button";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 
 export default async function DashboardLayout({
   children,
@@ -37,44 +38,17 @@ export default async function DashboardLayout({
     redirect("/pending-approval?status=rejected");
   }
 
-  const isAdmin = profile?.role === "admin";
-
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b px-6 py-4">
-        <div className="flex items-center gap-6">
-          <span className="font-semibold">EvenTeam</span>
-          <nav className="flex gap-4 text-sm">
-            <Link href="/dashboard" className="text-gray-600 hover:text-black">
-              Dashboard
-            </Link>
-            <Link href="/events" className="text-gray-600 hover:text-black">
-              Events
-            </Link>
-            <Link href="/templates" className="text-gray-600 hover:text-black">
-              Templates
-            </Link>
-            <Link href="/email-templates" className="text-gray-600 hover:text-black">
-              Email Templates
-            </Link>
-            {isAdmin && (
-              <Link href="/companies" className="text-gray-600 hover:text-black">
-                Companies
-              </Link>
-            )}
-            {isAdmin && (
-              <Link href="/audit-log" className="text-gray-600 hover:text-black">
-                Audit Log
-              </Link>
-            )}
-            <Link href="/settings/profile" className="text-gray-600 hover:text-black">
-              Settings
-            </Link>
-          </nav>
-        </div>
-        <LogoutButton />
-      </header>
-      <main className="flex-1 p-6">{children}</main>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <span className="text-sm font-medium text-muted-foreground">EvenTeam</span>
+        </header>
+        <main className="flex-1 space-y-6 p-4 md:p-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
