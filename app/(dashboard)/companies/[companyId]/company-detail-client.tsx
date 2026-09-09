@@ -2,29 +2,35 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Check, CreditCard, X } from "lucide-react";
 import { companiesCache, getCompanyDetail } from "@/lib/queries/companies";
 import { approveCompany } from "@/lib/edge-functions";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const companyStatusStyles: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  active: "bg-green-100 text-green-800",
-  suspended: "bg-orange-100 text-orange-800",
-  rejected: "bg-red-100 text-red-800",
+const companyStatusVariants: Record<string, "outline" | "default" | "secondary" | "destructive"> = {
+  pending: "outline",
+  active: "default",
+  suspended: "secondary",
+  rejected: "destructive",
 };
 
-const stripeStatusStyles: Record<string, string> = {
-  not_connected: "bg-gray-100 text-gray-700",
-  onboarding: "bg-yellow-100 text-yellow-800",
-  restricted: "bg-orange-100 text-orange-800",
-  active: "bg-green-100 text-green-800",
-  disabled: "bg-red-100 text-red-800",
+const stripeStatusVariants: Record<string, "outline" | "default" | "secondary" | "destructive"> = {
+  not_connected: "outline",
+  onboarding: "secondary",
+  restricted: "secondary",
+  active: "default",
+  disabled: "destructive",
 };
 
-const eventStatusStyles: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  active: "bg-green-100 text-green-800",
-  ended: "bg-gray-100 text-gray-700",
-  cancelled: "bg-red-100 text-red-800",
+const eventStatusVariants: Record<string, "outline" | "default" | "secondary" | "destructive"> = {
+  draft: "outline",
+  active: "default",
+  ended: "secondary",
+  cancelled: "destructive",
 };
 
 export function CompanyDetailClient({ companyId }: { companyId: string }) {
@@ -45,19 +51,23 @@ export function CompanyDetailClient({ companyId }: { companyId: string }) {
 
   if (isPending) {
     return (
-      <div className="space-y-2">
-        <div className="h-8 w-48 animate-pulse rounded bg-gray-100" />
-        <div className="h-32 animate-pulse rounded-lg bg-gray-100" />
+      <div className="max-w-3xl space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-32 w-full rounded-xl" />
       </div>
     );
   }
 
   if (error) {
-    return <p className="text-sm text-red-600">Failed to load company: {error.message}</p>;
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>Failed to load company: {error.message}</AlertDescription>
+      </Alert>
+    );
   }
 
   if (!company) {
-    return <p className="text-sm text-gray-500">Company not found.</p>;
+    return <p className="text-sm text-muted-foreground">Company not found.</p>;
   }
 
   const stripe = company.stripe_accounts;
@@ -66,121 +76,122 @@ export function CompanyDetailClient({ companyId }: { companyId: string }) {
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/companies" className="text-xs text-gray-500 hover:text-black">
-            &larr; Back to companies
+          <Link href="/companies" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-3" />
+            Back to companies
           </Link>
-          <h1 className="text-2xl font-semibold">{company.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{company.name}</h1>
         </div>
-        <span
-          className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-            companyStatusStyles[company.status] ?? "bg-gray-100 text-gray-700"
-          }`}
-        >
+        <Badge variant={companyStatusVariants[company.status] ?? "outline"} className="capitalize">
           {company.status}
-        </span>
+        </Badge>
       </div>
 
       {company.status === "pending" && (
-        <div className="flex items-center gap-2 rounded-lg border p-4">
-          <p className="flex-1 text-sm text-gray-600">
-            This company is awaiting approval before it can publish events.
-          </p>
-          <button
-            onClick={() => approveMutation.mutate({ company_id: company.id, approve: true })}
-            disabled={approveMutation.isPending}
-            className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-          >
-            Approve
-          </button>
-          <button
-            onClick={() =>
-              approveMutation.mutate({
-                company_id: company.id,
-                approve: false,
-                rejected_reason: "Rejected from company detail view",
-              })
-            }
-            disabled={approveMutation.isPending}
-            className="rounded-md border border-red-600 px-3 py-1.5 text-xs font-medium text-red-600 disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </div>
+        <Card>
+          <CardContent className="flex items-center gap-2 p-4">
+            <p className="flex-1 text-sm text-muted-foreground">
+              This company is awaiting approval before it can publish events.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => approveMutation.mutate({ company_id: company.id, approve: true })}
+              disabled={approveMutation.isPending}
+            >
+              <Check className="size-3.5" />
+              Approve
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() =>
+                approveMutation.mutate({
+                  company_id: company.id,
+                  approve: false,
+                  rejected_reason: "Rejected from company detail view",
+                })
+              }
+              disabled={approveMutation.isPending}
+            >
+              <X className="size-3.5" />
+              Reject
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 text-sm">
-        <div>
-          <p className="text-xs text-gray-500">Contact email</p>
-          <p>{company.contact_email}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Contact phone</p>
-          <p>{company.contact_phone ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Slug</p>
-          <p>{company.slug}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Commission %</p>
-          <p>{company.company_settings?.admin_commission_pct ?? "—"}%</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Address</p>
-          <p>
-            {[company.address_line1, company.city, company.region, company.country]
-              .filter(Boolean)
-              .join(", ") || "—"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Created</p>
-          <p>{new Date(company.created_at).toLocaleDateString()}</p>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground">Contact email</p>
+            <p>{company.contact_email}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Contact phone</p>
+            <p>{company.contact_phone ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Slug</p>
+            <p>{company.slug}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Commission %</p>
+            <p>{company.company_settings?.admin_commission_pct ?? "—"}%</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Address</p>
+            <p>
+              {[company.address_line1, company.city, company.region, company.country]
+                .filter(Boolean)
+                .join(", ") || "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Created</p>
+            <p>{new Date(company.created_at).toLocaleDateString()}</p>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="rounded-lg border p-4">
-        <h2 className="mb-2 text-sm font-medium">Stripe Connect</h2>
-        <div className="flex items-center gap-2">
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-              stripeStatusStyles[stripe?.status ?? "not_connected"] ?? "bg-gray-100 text-gray-700"
-            }`}
-          >
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CreditCard className="size-4 text-muted-foreground" />
+            Stripe Connect
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center gap-2">
+          <Badge variant={stripeStatusVariants[stripe?.status ?? "not_connected"] ?? "outline"} className="capitalize">
             {(stripe?.status ?? "not_connected").replace("_", " ")}
-          </span>
-          {stripe?.charges_enabled && (
-            <span className="text-xs text-gray-500">Charges enabled</span>
-          )}
-          {stripe?.payouts_enabled && (
-            <span className="text-xs text-gray-500">Payouts enabled</span>
-          )}
-        </div>
-      </div>
+          </Badge>
+          {stripe?.charges_enabled && <span className="text-xs text-muted-foreground">Charges enabled</span>}
+          {stripe?.payouts_enabled && <span className="text-xs text-muted-foreground">Payouts enabled</span>}
+        </CardContent>
+      </Card>
 
-      <div className="rounded-lg border">
-        <h2 className="border-b p-4 text-sm font-medium">Events</h2>
-        {company.events.length === 0 ? (
-          <p className="p-4 text-sm text-gray-500">No events yet.</p>
-        ) : (
-          <ul className="divide-y">
-            {company.events.map((e) => (
-              <li key={e.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <Link href={`/events/${e.id}/edit`} className="font-medium hover:underline">
-                  {e.title}
-                </Link>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-                    eventStatusStyles[e.status] ?? "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {e.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <Card className="py-0">
+        <CardHeader className="border-b py-4">
+          <CardTitle className="text-base">Events</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {company.events.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">No events yet.</p>
+          ) : (
+            <ul className="divide-y">
+              {company.events.map((e) => (
+                <li key={e.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <Link href={`/events/${e.id}/edit`} className="font-medium hover:underline">
+                    {e.title}
+                  </Link>
+                  <Badge variant={eventStatusVariants[e.status] ?? "outline"} className="capitalize">
+                    {e.status}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
