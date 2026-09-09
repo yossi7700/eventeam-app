@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2 } from "lucide-react";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
 import { OtpGatedAction } from "./otp-gated-action";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function SecuritySettingsClient() {
   const { data: profile } = useQuery({
@@ -20,8 +23,6 @@ export function SecuritySettingsClient() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">Security</h1>
-
       <OtpGatedAction
         purpose="change_password"
         title="Change password"
@@ -29,7 +30,7 @@ export function SecuritySettingsClient() {
         initialPayload={{ new_password: "" }}
         onVerified={() => setPasswordChanged(true)}
         renderPayloadFields={(payload, setPayload) => (
-          <input
+          <Input
             required
             type="password"
             minLength={8}
@@ -39,12 +40,16 @@ export function SecuritySettingsClient() {
               setNewPassword(e.target.value);
               setPayload({ ...payload, new_password: e.target.value });
             }}
-            className="w-full rounded-md border px-3 py-2 text-sm"
           />
         )}
       />
       {passwordChanged && (
-        <p className="text-sm text-green-700">Password updated successfully.</p>
+        <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 [&_svg]:text-emerald-600">
+          <CheckCircle2 />
+          <AlertDescription className="text-emerald-700 dark:text-emerald-400">
+            Password updated successfully.
+          </AlertDescription>
+        </Alert>
       )}
 
       {isCompany && (
@@ -56,7 +61,7 @@ export function SecuritySettingsClient() {
             initialPayload={{ new_commission_pct: 0 }}
             onVerified={() => setCommissionChanged(true)}
             renderPayloadFields={(payload, setPayload) => (
-              <input
+              <Input
                 required
                 type="number"
                 min={0}
@@ -68,12 +73,16 @@ export function SecuritySettingsClient() {
                   setNewCommissionPct(e.target.value);
                   setPayload({ ...payload, new_commission_pct: Number(e.target.value) });
                 }}
-                className="w-full rounded-md border px-3 py-2 text-sm"
               />
             )}
           />
           {commissionChanged && (
-            <p className="text-sm text-green-700">Commission rate updated successfully.</p>
+            <Alert className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 [&_svg]:text-emerald-600">
+              <CheckCircle2 />
+              <AlertDescription className="text-emerald-700 dark:text-emerald-400">
+                Commission rate updated successfully.
+              </AlertDescription>
+            </Alert>
           )}
         </>
       )}

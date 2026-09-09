@@ -3,19 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CreditCard } from "lucide-react";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
 import { getStripeAccount, stripeAccountCache } from "@/lib/queries/stripe-account";
 import {
   completeStripeConnectOnboarding,
   getStripeConnectAuthorizeUrl,
 } from "@/lib/edge-functions";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const statusStyles: Record<string, string> = {
-  not_connected: "bg-gray-100 text-gray-700",
-  onboarding: "bg-yellow-100 text-yellow-800",
-  restricted: "bg-orange-100 text-orange-800",
-  active: "bg-green-100 text-green-800",
-  disabled: "bg-red-100 text-red-800",
+const statusVariants: Record<string, "outline" | "default" | "secondary" | "destructive"> = {
+  not_connected: "outline",
+  onboarding: "secondary",
+  restricted: "secondary",
+  active: "default",
+  disabled: "destructive",
 };
 
 // Gap-audit item: STRIPE_CONNECT_REDIRECT_URI (see TODO-FOR-YOSSI.md) has
@@ -73,7 +79,7 @@ export function PaymentSettingsClient() {
   }, [searchParams]);
 
   if (!companyId || isPending) {
-    return <div className="h-40 animate-pulse rounded-lg bg-gray-100" />;
+    return <Skeleton className="h-56 max-w-2xl rounded-xl" />;
   }
 
   const status = account?.status ?? "not_connected";
@@ -81,81 +87,82 @@ export function PaymentSettingsClient() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Payment Settings</h1>
-
-      <div className="space-y-3 rounded-lg border p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium">Stripe Connect</h2>
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-              statusStyles[status] ?? "bg-gray-100 text-gray-700"
-            }`}
-          >
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CreditCard className="size-4 text-muted-foreground" />
+            Stripe Connect
+          </CardTitle>
+          <Badge variant={statusVariants[status] ?? "outline"} className="capitalize">
             {status.replace("_", " ")}
-          </span>
-        </div>
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {completeMutation.isPending && (
+            <p className="text-sm text-muted-foreground">Finishing Stripe connection...</p>
+          )}
 
-        {completeMutation.isPending && (
-          <p className="text-sm text-gray-500">Finishing Stripe connection...</p>
-        )}
+          {isConnected && account && (
+            <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Business name</p>
+                <p>{account.business_name ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Business email</p>
+                <p>{account.business_email ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Account type</p>
+                <p className="capitalize">{account.account_type ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Bank account</p>
+                <p>
+                  {account.bank_name
+                    ? `${account.bank_name} ****${account.bank_account_last4 ?? ""}`
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Charges enabled</p>
+                <p>{account.charges_enabled ? "Yes" : "No"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Payouts enabled</p>
+                <p>{account.payouts_enabled ? "Yes" : "No"}</p>
+              </div>
+            </div>
+          )}
 
-        {isConnected && account && (
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="text-xs text-gray-500">Business name</p>
-              <p>{account.business_name ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Business email</p>
-              <p>{account.business_email ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Account type</p>
-              <p className="capitalize">{account.account_type ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Bank account</p>
-              <p>
-                {account.bank_name
-                  ? `${account.bank_name} ****${account.bank_account_last4 ?? ""}`
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Charges enabled</p>
-              <p>{account.charges_enabled ? "Yes" : "No"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Payouts enabled</p>
-              <p>{account.payouts_enabled ? "Yes" : "No"}</p>
-            </div>
-          </div>
-        )}
+          {!isConnected && (
+            <p className="text-sm text-muted-foreground">
+              Connect your Stripe account to accept card payments from guests. Cash payments work
+              regardless of this connection.
+            </p>
+          )}
 
-        {!isConnected && (
-          <p className="text-sm text-gray-500">
-            Connect your Stripe account to accept card payments from guests. Cash payments work
-            regardless of this connection.
-          </p>
-        )}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          onClick={() => {
-            setError(null);
-            connectMutation.mutate();
-          }}
-          disabled={connectMutation.isPending}
-          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {connectMutation.isPending
-            ? "Redirecting to Stripe..."
-            : isConnected
-              ? "Reconnect Stripe"
-              : "Connect Stripe"}
-        </button>
-      </div>
+          <Button
+            onClick={() => {
+              setError(null);
+              connectMutation.mutate();
+            }}
+            disabled={connectMutation.isPending}
+          >
+            {connectMutation.isPending
+              ? "Redirecting to Stripe..."
+              : isConnected
+                ? "Reconnect Stripe"
+                : "Connect Stripe"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
