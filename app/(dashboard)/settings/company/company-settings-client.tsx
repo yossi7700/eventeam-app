@@ -280,6 +280,9 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
   const [hydrated, setHydrated] = useState(false);
   const [platformFeePct, setPlatformFeePct] = useState("");
   const [platformFeeText, setPlatformFeeText] = useState("");
+  const [regulationText, setRegulationText] = useState("");
+  const [donationFieldText, setDonationFieldText] = useState("");
+  const [codText, setCodText] = useState("");
 
   if (!hydrated && settings !== undefined) {
     const next: Record<string, TriState> = {};
@@ -289,6 +292,9 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
     setDefaults(next);
     setPlatformFeePct(settings?.platform_fee_pct != null ? String(settings.platform_fee_pct) : "");
     setPlatformFeeText(settings?.platform_fee_text ?? "");
+    setRegulationText(settings?.regulation_text ?? "");
+    setDonationFieldText(settings?.donation_field_text ?? "");
+    setCodText(settings?.cod_text ?? "");
     setHydrated(true);
   }
 
@@ -297,6 +303,9 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
       const patch: Record<string, boolean | number | string | null> = {
         platform_fee_pct: platformFeePct === "" ? null : Number(platformFeePct),
         platform_fee_text: platformFeeText || null,
+        regulation_text: regulationText || null,
+        donation_field_text: donationFieldText || null,
+        cod_text: codText || null,
       };
       for (const { key } of DEFAULT_FIELDS) {
         patch[key] = defaults[key] === "inherit" ? null : defaults[key] === "on";
@@ -367,6 +376,43 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
             placeholder="e.g. Includes a 3% service fee"
             value={platformFeeText}
             onChange={(e) => setPlatformFeeText(e.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      <div className="space-y-2 border-t pt-3">
+        <p className="text-xs font-medium text-gray-500">
+          Text shown on the public booking page alongside the toggles above
+        </p>
+        <label className="block text-xs text-gray-500">
+          Terms &amp; regulations text (shown when &quot;Show terms &amp; regulations&quot; is
+          on)
+          <textarea
+            rows={2}
+            placeholder="I agree to the terms and conditions for this event."
+            value={regulationText}
+            onChange={(e) => setRegulationText(e.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-xs text-gray-500">
+          Donation field text (shown when donations are enabled)
+          <textarea
+            rows={2}
+            placeholder="Your donation helps support this event."
+            value={donationFieldText}
+            onChange={(e) => setDonationFieldText(e.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="block text-xs text-gray-500">
+          Cash payment instructions (shown when cash is selected)
+          <textarea
+            rows={2}
+            placeholder="Please bring exact cash to the event."
+            value={codText}
+            onChange={(e) => setCodText(e.target.value)}
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
           />
         </label>

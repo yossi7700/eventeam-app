@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getPublicEventWithChildren, publicBookingCache } from "@/lib/queries/public-booking";
+import {
+  getPublicCompanyProfile,
+  getPublicEventWithChildren,
+  publicBookingCache,
+} from "@/lib/queries/public-booking";
 import { saveRegistrationDraft, type DraftLineItem } from "@/lib/registration-draft";
 
 export function RegisterFormClient({
@@ -20,12 +24,39 @@ export function RegisterFormClient({
     queryFn: () => getPublicEventWithChildren(companySlug, eventSlug),
   });
 
+  const { data: company } = useQuery({
+    queryKey: publicBookingCache.companyKey(companySlug),
+    queryFn: () => getPublicCompanyProfile(companySlug),
+  });
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("card");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"card" | "cash" | null>(
+    null
+  );
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [donationAmount, setDonationAmount] = useState("");
+  const [agreedToRegulation, setAgreedToRegulation] = useState(false);
+
+  const advance = event?.advance;
+  const cashAllowed = advance?.is_cash_allowed ?? true;
+  const cardAllowed = advance?.is_show_stripe ?? true;
+  const donationAllowed = advance?.is_donation_allowed ?? false;
+  const attendeesRequired = advance?.is_attendees_required ?? false;
+  const showRegulation = advance?.is_show_regulation ?? false;
+
+  // Derived during render rather than synced via an effect: if the user
+  // hasn't picked a method yet, or their pick is no longer valid once the
+  // event's resolved settings load, fall back to whichever is allowed.
+  const paymentMethod: "card" | "cash" =
+    selectedPaymentMethod === "cash" && cashAllowed
+      ? "cash"
+      : selectedPaymentMethod === "card" && cardAllowed
+        ? "card"
+        : cardAllowed
+          ? "card"
+          : "cash";
 
   if (isPending) {
     return <div className="mx-auto h-64 max-w-2xl animate-pulse rounded-lg bg-gray-100" />;
@@ -70,6 +101,16 @@ export function RegisterFormClient({
 
     if (lineItems.length === 0) {
       alert("Please select at least one ticket.");
+      return;
+    }
+
+    if (attendeesRequired && !email && !phone) {
+      alert("Please provide an email or phone number.");
+      return;
+    }
+
+    if (showRegulation && !agreedToRegulation) {
+      alert("Please agree to the terms before continuing.");
       return;
     }
 
@@ -143,9 +184,12 @@ export function RegisterFormClient({
         ))}
       </div>
 
-      {event.donation_fields.length > 0 && (
+      {donationAllowed && event.donation_fields.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-lg font-medium">Donation (optional)</h2>
+          {company?.donation_field_text && (
+            <p className="text-sm text-gray-500">{company.donation_field_text}</p>
+          )}
           <input
             type="number"
             min={0}
@@ -158,27 +202,50 @@ export function RegisterFormClient({
         </div>
       )}
 
-      <div className="space-y-2">
-        <h2 className="text-lg font-medium">Payment method</h2>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              checked={paymentMethod === "card"}
-              onChange={() => setPaymentMethod("card")}
-            />
-            Card
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              checked={paymentMethod === "cash"}
-              onChange={() => setPaymentMethod("cash")}
-            />
-            Cash (pay at event)
-          </label>
+      {(cardAllowed || cashAllowed) && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-medium">Payment method</h2>
+          <div className="flex gap-4">
+            {cardAllowed && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={paymentMethod === "card"}
+                  onChange={() => setSelectedPaymentMethod("card")}
+                />
+                Card
+              </label>
+            )}
+            {cashAllowed && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  checked={paymentMethod === "cash"}
+                  onChange={() => setSelectedPaymentMethod("cash")}
+                />
+                Cash (pay at event)
+              </label>
+            )}
+          </div>
+          {paymentMethod === "cash" && company?.cod_text && (
+            <p className="text-sm text-gray-500">{company.cod_text}</p>
+          )}
         </div>
-      </div>
+      )}
+
+      {showRegulation && (
+        <label className="flex items-start gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={agreedToRegulation}
+            onChange={(e) => setAgreedToRegulation(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            {company?.regulation_text ?? "I agree to the terms and conditions for this event."}
+          </span>
+        </label>
+      )}
 
       <button
         type="submit"

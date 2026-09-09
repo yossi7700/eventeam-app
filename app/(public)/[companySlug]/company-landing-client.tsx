@@ -38,6 +38,33 @@ export function CompanyLandingClient({ companySlug }: { companySlug: string }) {
         {company.about_text && (
           <p className="mt-2 text-gray-600">{company.about_text}</p>
         )}
+        <div className="mt-3 flex justify-center gap-4 text-sm text-gray-500">
+          {company.website_url && (
+            <a href={company.website_url} target="_blank" rel="noreferrer" className="hover:text-black">
+              Website
+            </a>
+          )}
+          {company.facebook_url && (
+            <a href={company.facebook_url} target="_blank" rel="noreferrer" className="hover:text-black">
+              Facebook
+            </a>
+          )}
+          {company.instagram_url && (
+            <a href={company.instagram_url} target="_blank" rel="noreferrer" className="hover:text-black">
+              Instagram
+            </a>
+          )}
+          {company.twitter_url && (
+            <a href={company.twitter_url} target="_blank" rel="noreferrer" className="hover:text-black">
+              Twitter
+            </a>
+          )}
+          {company.youtube_url && (
+            <a href={company.youtube_url} target="_blank" rel="noreferrer" className="hover:text-black">
+              YouTube
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">

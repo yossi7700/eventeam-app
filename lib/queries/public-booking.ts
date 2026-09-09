@@ -7,9 +7,23 @@ export type PublicSubEvent = Tables<"public_sub_events_view">;
 export type PublicProduct = Tables<"public_products_view">;
 export type PublicDonationField = Tables<"public_donation_fields_view">;
 
+export type ResolvedAdvanceSettings = {
+  is_attendees_required: boolean | null;
+  is_show_address: boolean | null;
+  is_cash_allowed: boolean | null;
+  is_donation_allowed: boolean | null;
+  is_show_regulation: boolean | null;
+  is_show_stripe: boolean | null;
+  is_show_app_fee: boolean | null;
+  is_enable_donation: boolean | null;
+  platform_fee_pct: number | null;
+  platform_fee_text: string | null;
+};
+
 export type PublicEventWithChildren = PublicEvent & {
   sub_events: (PublicSubEvent & { products: PublicProduct[] })[];
   donation_fields: PublicDonationField[];
+  advance: ResolvedAdvanceSettings | null;
 };
 
 export const publicBookingCache = {
@@ -65,26 +79,32 @@ export async function getPublicEventWithChildren(
   if (eventError) throw new Error(eventError.message);
   if (!event || !event.id) return null;
 
-  const [{ data: subEvents, error: subEventsError }, { data: donationFields, error: donationError }] =
-    await Promise.all([
-      supabase
-        .from("public_sub_events_view")
-        .select("*, products:public_products_view(*)")
-        .eq("event_id", event.id)
-        .order("sort_order"),
-      supabase
-        .from("public_donation_fields_view")
-        .select("*")
-        .eq("event_id", event.id)
-        .order("sort_order"),
-    ]);
+  const [
+    { data: subEvents, error: subEventsError },
+    { data: donationFields, error: donationError },
+    { data: advanceRows, error: advanceError },
+  ] = await Promise.all([
+    supabase
+      .from("public_sub_events_view")
+      .select("*, products:public_products_view(*)")
+      .eq("event_id", event.id)
+      .order("sort_order"),
+    supabase
+      .from("public_donation_fields_view")
+      .select("*")
+      .eq("event_id", event.id)
+      .order("sort_order"),
+    supabase.rpc("resolve_event_advance_settings", { p_event_id: event.id }),
+  ]);
 
   if (subEventsError) throw new Error(subEventsError.message);
   if (donationError) throw new Error(donationError.message);
+  if (advanceError) throw new Error(advanceError.message);
 
   return {
     ...event,
     sub_events: (subEvents ?? []) as PublicEventWithChildren["sub_events"],
     donation_fields: donationFields ?? [],
+    advance: (advanceRows?.[0] as ResolvedAdvanceSettings | undefined) ?? null,
   };
 }

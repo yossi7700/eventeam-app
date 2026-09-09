@@ -158,6 +158,7 @@ export type Database = {
         Row: {
           about_text: string | null
           admin_commission_pct: number
+          cod_text: string | null
           company_id: string
           custom_css: string | null
           default_is_attendees_required: boolean | null
@@ -169,6 +170,7 @@ export type Database = {
           default_is_show_regulation: boolean | null
           default_is_show_stripe: boolean | null
           donation_excluded_from_commission: boolean
+          donation_field_text: string | null
           facebook_url: string | null
           font_family: string | null
           hero_image_path: string | null
@@ -176,6 +178,7 @@ export type Database = {
           platform_fee_pct: number | null
           platform_fee_text: string | null
           primary_color: string | null
+          regulation_text: string | null
           secondary_color: string | null
           step_1_title: string | null
           step_2_title: string | null
@@ -190,6 +193,7 @@ export type Database = {
         Insert: {
           about_text?: string | null
           admin_commission_pct?: number
+          cod_text?: string | null
           company_id: string
           custom_css?: string | null
           default_is_attendees_required?: boolean | null
@@ -201,6 +205,7 @@ export type Database = {
           default_is_show_regulation?: boolean | null
           default_is_show_stripe?: boolean | null
           donation_excluded_from_commission?: boolean
+          donation_field_text?: string | null
           facebook_url?: string | null
           font_family?: string | null
           hero_image_path?: string | null
@@ -208,6 +213,7 @@ export type Database = {
           platform_fee_pct?: number | null
           platform_fee_text?: string | null
           primary_color?: string | null
+          regulation_text?: string | null
           secondary_color?: string | null
           step_1_title?: string | null
           step_2_title?: string | null
@@ -222,6 +228,7 @@ export type Database = {
         Update: {
           about_text?: string | null
           admin_commission_pct?: number
+          cod_text?: string | null
           company_id?: string
           custom_css?: string | null
           default_is_attendees_required?: boolean | null
@@ -233,6 +240,7 @@ export type Database = {
           default_is_show_regulation?: boolean | null
           default_is_show_stripe?: boolean | null
           donation_excluded_from_commission?: boolean
+          donation_field_text?: string | null
           facebook_url?: string | null
           font_family?: string | null
           hero_image_path?: string | null
@@ -240,6 +248,7 @@ export type Database = {
           platform_fee_pct?: number | null
           platform_fee_text?: string | null
           primary_color?: string | null
+          regulation_text?: string | null
           secondary_color?: string | null
           step_1_title?: string | null
           step_2_title?: string | null
@@ -1097,8 +1106,10 @@ export type Database = {
       public_company_profile: {
         Row: {
           about_text: string | null
+          cod_text: string | null
           company_id: string | null
           custom_css: string | null
+          donation_field_text: string | null
           facebook_url: string | null
           font_family: string | null
           hero_image_path: string | null
@@ -1106,9 +1117,17 @@ export type Database = {
           logo_path: string | null
           name: string | null
           primary_color: string | null
+          regulation_text: string | null
           secondary_color: string | null
           slug: string | null
+          step_1_title: string | null
+          step_2_title: string | null
+          step_3_title: string | null
+          step_4_title: string | null
+          step_5_title: string | null
+          twitter_url: string | null
           website_url: string | null
+          youtube_url: string | null
         }
         Relationships: []
       }
