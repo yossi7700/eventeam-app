@@ -119,6 +119,32 @@ export function registerGuest(input: RegisterGuestInput) {
   return invoke<RegisterGuestResponse>("register-guest", input);
 }
 
+export type DashboardUpcomingEvent = {
+  id: string;
+  title: string;
+  slug: string;
+  start_date: string;
+  end_date: string;
+  company_id: string;
+};
+
+export type DashboardRecentRegistrant = {
+  id: string;
+  primary_guest_name: string;
+  primary_guest_email: string;
+  status: string;
+  created_at: string;
+  event_title: string;
+  company_name: string;
+  price_breakdown: {
+    total_amount: number;
+    guest_amount: number;
+    donation: number;
+    commission: number;
+    plateform_fee: number;
+  };
+};
+
 export type DashboardKpis = {
   total_events: number;
   active_events: number;
@@ -133,6 +159,8 @@ export type DashboardKpis = {
   total_commission: number;
   cash_cleared: number;
   cash_pending: number;
+  upcoming_events: DashboardUpcomingEvent[];
+  recent_registrants: DashboardRecentRegistrant[];
 };
 
 export async function getDashboardKpis(): Promise<DashboardKpis> {

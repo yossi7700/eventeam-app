@@ -65,6 +65,53 @@ export function DashboardKpisClient() {
           <KpiTile label="Cash pending" value={`$${kpis.cash_pending.toFixed(2)}`} />
         </div>
       )}
+
+      {kpis && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-2">
+            <h2 className="text-lg font-medium">Upcoming events</h2>
+            {kpis.upcoming_events.length === 0 ? (
+              <p className="text-sm text-gray-500">No upcoming events.</p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {kpis.upcoming_events.map((event) => (
+                  <li key={event.id} className="px-4 py-3">
+                    <p className="font-medium">{event.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(event.start_date).toLocaleDateString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-lg font-medium">Recent registrants</h2>
+            {kpis.recent_registrants.length === 0 ? (
+              <p className="text-sm text-gray-500">No registrations yet.</p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {kpis.recent_registrants.map((r) => (
+                  <li key={r.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{r.primary_guest_name}</p>
+                        <p className="text-sm text-gray-500">
+                          {r.event_title} &middot; {r.company_name}
+                        </p>
+                      </div>
+                      <span className="text-sm font-medium">
+                        ${Number(r.price_breakdown.total_amount).toFixed(2)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
