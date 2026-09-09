@@ -10,6 +10,13 @@ import {
   updateCompany,
   updateCompanySettings,
 } from "@/lib/queries/company-settings";
+import {
+  createDonationTemplate,
+  deleteDonationTemplate,
+  donationTemplatesCache,
+  listDonationTemplates,
+  updateDonationTemplate,
+} from "@/lib/queries/donations";
 
 function ProfileForm({ companyId }: { companyId: string }) {
   const queryClient = useQueryClient();
@@ -432,6 +439,134 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
   );
 }
 
+function DonationCatalogForm({ companyId }: { companyId: string }) {
+  const queryClient = useQueryClient();
+  const [title, setTitle] = useState("");
+  const [suggestedAmount, setSuggestedAmount] = useState("");
+  const [allowCustom, setAllowCustom] = useState(true);
+
+  const { data: templates, isPending } = useQuery({
+    queryKey: donationTemplatesCache.listKey(companyId),
+    queryFn: () => listDonationTemplates(companyId),
+  });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: donationTemplatesCache.listKey(companyId) });
+
+  const createMutation = useMutation({
+    mutationFn: createDonationTemplate,
+    onSuccess: () => {
+      invalidate();
+      setTitle("");
+      setSuggestedAmount("");
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      updateDonationTemplate(id, { is_active }),
+    onSuccess: invalidate,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteDonationTemplate,
+    onSuccess: invalidate,
+  });
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    createMutation.mutate({
+      company_id: companyId,
+      title,
+      suggested_amount: suggestedAmount ? Number(suggestedAmount) : null,
+      allow_custom_amount: allowCustom,
+      sort_order: templates?.length ?? 0,
+    });
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border p-4">
+      <div>
+        <h2 className="text-sm font-medium">Donation catalog</h2>
+        <p className="text-xs text-gray-500">
+          Define donation fields once here, then add them to any event from the event&apos;s
+          Donations page — no need to re-type them each time.
+        </p>
+      </div>
+
+      {isPending && <div className="h-16 animate-pulse rounded-lg bg-gray-100" />}
+
+      {templates && templates.length > 0 && (
+        <ul className="divide-y rounded-lg border">
+          {templates.map((t) => (
+            <li key={t.id} className="flex items-center justify-between px-3 py-2">
+              <div>
+                <p className="text-sm font-medium">{t.title}</p>
+                <p className="text-xs text-gray-500">
+                  {t.suggested_amount ? `Suggested: $${t.suggested_amount}` : "No suggested amount"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleActiveMutation.mutate({ id: t.id, is_active: !t.is_active })}
+                  className="rounded-md border px-2 py-1 text-xs font-medium"
+                >
+                  {t.is_active ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate(t.id)}
+                  className="rounded-md border border-red-600 px-2 py-1 text-xs font-medium text-red-600"
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form onSubmit={handleAdd} className="flex items-end gap-2">
+        <input
+          required
+          placeholder="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="flex-1 rounded-md border px-3 py-2 text-sm"
+        />
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder="Suggested $"
+          value={suggestedAmount}
+          onChange={(e) => setSuggestedAmount(e.target.value)}
+          className="w-28 rounded-md border px-3 py-2 text-sm"
+        />
+        <label className="flex items-center gap-1 whitespace-nowrap text-xs text-gray-500">
+          <input
+            type="checkbox"
+            checked={allowCustom}
+            onChange={(e) => setAllowCustom(e.target.checked)}
+          />
+          Custom amount
+        </label>
+        <button
+          type="submit"
+          disabled={createMutation.isPending}
+          className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Add
+        </button>
+      </form>
+      {createMutation.error && (
+        <p className="text-xs text-red-600">{(createMutation.error as Error).message}</p>
+      )}
+    </div>
+  );
+}
+
 export function CompanySettingsClient() {
   const { data: profile } = useQuery({
     queryKey: profileCache.meKey,
@@ -449,6 +584,7 @@ export function CompanySettingsClient() {
       <h1 className="text-2xl font-semibold">Company Settings</h1>
       <ProfileForm companyId={companyId} />
       <EventDefaultsForm companyId={companyId} />
+      <DonationCatalogForm companyId={companyId} />
       <FrontPageDesignForm companyId={companyId} />
     </div>
   );

@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  addTemplateToEvent,
   createDonationField,
   deleteDonationField,
   donationFieldsCache,
+  donationTemplatesCache,
   listDonationFields,
+  listDonationTemplates,
   updateDonationField,
 } from "@/lib/queries/donations";
+import { getMyProfile, profileCache } from "@/lib/queries/profile";
 
 export function DonationsClient({ eventId }: { eventId: string }) {
   const queryClient = useQueryClient();
@@ -16,9 +21,21 @@ export function DonationsClient({ eventId }: { eventId: string }) {
   const [suggestedAmount, setSuggestedAmount] = useState("");
   const [allowCustom, setAllowCustom] = useState(true);
 
+  const { data: profile } = useQuery({
+    queryKey: profileCache.meKey,
+    queryFn: getMyProfile,
+  });
+  const companyId = profile?.companies?.id ?? null;
+
   const { data: fields, isPending, error } = useQuery({
     queryKey: donationFieldsCache.listKey(eventId),
     queryFn: () => listDonationFields(eventId),
+  });
+
+  const { data: templates } = useQuery({
+    queryKey: companyId ? donationTemplatesCache.listKey(companyId) : ["donation_field_templates", "none"],
+    queryFn: () => listDonationTemplates(companyId!),
+    enabled: !!companyId,
   });
 
   const invalidate = () =>
@@ -31,6 +48,15 @@ export function DonationsClient({ eventId }: { eventId: string }) {
       setTitle("");
       setSuggestedAmount("");
     },
+  });
+
+  const addFromTemplateMutation = useMutation({
+    mutationFn: (templateId: string) => {
+      const template = templates?.find((t) => t.id === templateId);
+      if (!template) throw new Error("Template not found");
+      return addTemplateToEvent(eventId, template, fields?.length ?? 0);
+    },
+    onSuccess: invalidate,
   });
 
   const toggleActiveMutation = useMutation({
@@ -94,8 +120,39 @@ export function DonationsClient({ eventId }: { eventId: string }) {
         </ul>
       )}
 
+      {templates && templates.length > 0 && (
+        <div className="space-y-2 rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium">Add from your donation catalog</h2>
+            <Link href="/settings/company" className="text-xs text-gray-500 hover:text-black">
+              Manage catalog
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {templates
+              .filter((t) => !fields?.some((f) => f.template_id === t.id))
+              .map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => addFromTemplateMutation.mutate(t.id)}
+                  disabled={addFromTemplateMutation.isPending}
+                  className="rounded-full border px-3 py-1 text-xs font-medium disabled:opacity-50"
+                >
+                  + {t.title}
+                </button>
+              ))}
+          </div>
+          {addFromTemplateMutation.error && (
+            <p className="text-xs text-red-600">
+              {(addFromTemplateMutation.error as Error).message}
+            </p>
+          )}
+        </div>
+      )}
+
       <form onSubmit={handleAdd} className="space-y-3 rounded-lg border p-4">
-        <h2 className="text-sm font-medium">Add donation field</h2>
+        <h2 className="text-sm font-medium">Add a one-off donation field</h2>
         <input
           required
           placeholder="Title"

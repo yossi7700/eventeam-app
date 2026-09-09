@@ -284,6 +284,67 @@ export type Database = {
           },
         ]
       }
+      donation_field_templates: {
+        Row: {
+          allow_custom_amount: boolean
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          sort_order: number
+          suggested_amount: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allow_custom_amount?: boolean
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          suggested_amount?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allow_custom_amount?: boolean
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          suggested_amount?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donation_field_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donation_field_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_company_profile"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "donation_field_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_events_view"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
       donation_fields: {
         Row: {
           allow_custom_amount: boolean
@@ -294,6 +355,7 @@ export type Database = {
           is_active: boolean
           sort_order: number
           suggested_amount: number | null
+          template_id: string | null
           title: string
         }
         Insert: {
@@ -305,6 +367,7 @@ export type Database = {
           is_active?: boolean
           sort_order?: number
           suggested_amount?: number | null
+          template_id?: string | null
           title: string
         }
         Update: {
@@ -316,6 +379,7 @@ export type Database = {
           is_active?: boolean
           sort_order?: number
           suggested_amount?: number | null
+          template_id?: string | null
           title?: string
         }
         Relationships: [
@@ -331,6 +395,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "public_events_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donation_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "donation_field_templates"
             referencedColumns: ["id"]
           },
         ]
