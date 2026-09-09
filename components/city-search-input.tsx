@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { MapPin, X } from "lucide-react";
 import { searchCities, type City } from "@/lib/queries/cities";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 // Shared city-search widget (factored out of templates-client.tsx so
 // event-form-client.tsx can resolve a geonameid too, needed for
@@ -32,38 +35,41 @@ export function CitySearchInput({
 
   if (geonameid) {
     return (
-      <div className="flex items-center justify-between rounded-md border bg-gray-50 px-3 py-2 text-sm">
-        <span>{selectedLabel ?? `Location set (geonameid ${geonameid})`}</span>
-        <button
+      <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm">
+        <span className="flex items-center gap-1.5">
+          <MapPin className="size-3.5 text-muted-foreground" />
+          {selectedLabel ?? `Location set (geonameid ${geonameid})`}
+        </span>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={() => {
             setSelectedLabel(null);
             onChange("", "");
           }}
-          className="text-xs text-gray-500 hover:text-black"
         >
-          Change
-        </button>
+          <X />
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="relative">
-      <input
+      <Input
         placeholder="Search for a city (min 3 characters)"
         value={term}
         onChange={(e) => setTerm(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
       />
       {results && results.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full rounded-md border bg-white shadow-sm">
+        <ul className="absolute z-10 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
           {results.map((c) => (
             <li key={c.geonameid}>
               <button
                 type="button"
                 onClick={() => selectCity(c)}
-                className="block w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100"
+                className="block w-full px-3 py-1.5 text-left text-sm hover:bg-muted"
               >
                 {c.city_name}
                 {c.region_name ? `, ${c.region_name}` : ""} ({c.country_code})
