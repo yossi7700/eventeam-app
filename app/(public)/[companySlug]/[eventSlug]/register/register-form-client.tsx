@@ -3,12 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Banknote, CreditCard, Minus, Plus, Ticket } from "lucide-react";
 import {
   getPublicCompanyProfile,
   getPublicEventWithChildren,
   publicBookingCache,
 } from "@/lib/queries/public-booking";
 import { saveRegistrationDraft, type DraftLineItem } from "@/lib/registration-draft";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 
 export function RegisterFormClient({
   companySlug,
@@ -61,7 +71,13 @@ export function RegisterFormClient({
           : "cash";
 
   if (isPending) {
-    return <div className="mx-auto h-64 max-w-2xl animate-pulse rounded-lg bg-gray-100" />;
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 py-12">
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    );
   }
 
   if (!event) {
@@ -99,6 +115,7 @@ export function RegisterFormClient({
   const feeBase = ticketsSubtotal + donationValue;
   const estimatedPlatformFee = showAppFee ? Math.round(feeBase * (platformFeePct / 100) * 100) / 100 : 0;
   const estimatedTotal = feeBase + estimatedPlatformFee;
+  const ticketCount = Object.values(quantities).reduce((sum, q) => sum + q, 0);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -117,7 +134,7 @@ export function RegisterFormClient({
       });
 
     if (lineItems.length === 0) {
-      alert("Please select at least one ticket.");
+      toast.error("Please select at least one ticket.");
       return;
     }
 
@@ -125,17 +142,17 @@ export function RegisterFormClient({
       (p) => p.remaining != null && (quantities[p.id!] ?? 0) > p.remaining
     );
     if (overCapacity) {
-      alert(`Only ${overCapacity.remaining} left for "${overCapacity.name}".`);
+      toast.error(`Only ${overCapacity.remaining} left for "${overCapacity.name}".`);
       return;
     }
 
     if (attendeesRequired && !email && !phone) {
-      alert("Please provide an email or phone number.");
+      toast.error("Please provide an email or phone number.");
       return;
     }
 
     if (showRegulation && !agreedToRegulation) {
-      alert("Please agree to the terms before continuing.");
+      toast.error("Please agree to the terms before continuing.");
       return;
     }
 
@@ -160,173 +177,219 @@ export function RegisterFormClient({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6 py-12">
-      <h1 className="text-2xl font-semibold">Register for {event.title}</h1>
-
-      <div className="space-y-3">
-        <input
-          required
-          placeholder="Full name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-md border px-3 py-2"
-        />
-        <input
-          required
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border px-3 py-2"
-        />
-        <input
-          placeholder="Phone (optional)"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="w-full rounded-md border px-3 py-2"
-        />
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Register</h1>
+        <p className="text-sm text-muted-foreground">for {event.title}</p>
       </div>
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-medium">Tickets</h2>
-        {allProducts.map((p) => {
-          const soldOut = p.remaining != null && p.remaining <= 0;
-          return (
-            <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
-              <div className="flex items-start gap-2">
-                {p.color && (
-                  <span
-                    aria-hidden
-                    className="mt-1 h-3 w-3 shrink-0 rounded-full border"
-                    style={{ backgroundColor: p.color }}
-                  />
-                )}
-                <div>
-                  <p className="font-medium">{p.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {p.sub_event_title} &middot; {p.price} {p.currency}
-                  </p>
-                  {p.remaining != null && (
-                    <p className={`text-xs ${soldOut ? "text-red-600" : "text-gray-400"}`}>
-                      {soldOut ? "Sold out" : `${p.remaining} remaining`}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <input
-                type="number"
-                min={0}
-                max={p.remaining ?? undefined}
-                disabled={soldOut}
-                value={quantities[p.id!] ?? 0}
-                onChange={(e) => {
-                  const raw = Number(e.target.value);
-                  const capped = p.remaining != null ? Math.min(raw, p.remaining) : raw;
-                  setQuantities((q) => ({ ...q, [p.id!]: Math.max(0, capped) }));
-                }}
-                className="w-20 rounded-md border px-2 py-1 text-center disabled:bg-gray-100"
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Your details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="reg-name">Full name</Label>
+            <Input id="reg-name" required value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="reg-email">Email</Label>
+              <Input
+                id="reg-email"
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-          );
-        })}
-      </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="reg-phone">Phone (optional)</Label>
+              <Input id="reg-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Tickets</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {allProducts.map((p) => {
+            const soldOut = p.remaining != null && p.remaining <= 0;
+            const qty = quantities[p.id!] ?? 0;
+            return (
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-3 rounded-lg border p-3"
+              >
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <span
+                    aria-hidden
+                    className="mt-1 size-3 shrink-0 rounded-full border"
+                    style={{ backgroundColor: p.color ?? "var(--muted)" }}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{p.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {p.sub_event_title} &middot; {p.price} {p.currency}
+                    </p>
+                    {p.remaining != null && (
+                      <p className={`text-xs ${soldOut ? "text-destructive" : "text-muted-foreground"}`}>
+                        {soldOut ? "Sold out" : `${p.remaining} remaining`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={soldOut || qty <= 0}
+                    onClick={() =>
+                      setQuantities((q) => ({ ...q, [p.id!]: Math.max(0, (q[p.id!] ?? 0) - 1) }))
+                    }
+                  >
+                    <Minus />
+                  </Button>
+                  <span className="w-6 text-center text-sm font-medium tabular-nums">{qty}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={soldOut || (p.remaining != null && qty >= p.remaining)}
+                    onClick={() =>
+                      setQuantities((q) => {
+                        const next = (q[p.id!] ?? 0) + 1;
+                        return { ...q, [p.id!]: p.remaining != null ? Math.min(next, p.remaining) : next };
+                      })
+                    }
+                  >
+                    <Plus />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
 
       {donationAllowed && event.donation_fields.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-lg font-medium">Donation (optional)</h2>
-          {company?.donation_field_text && (
-            <p className="text-sm text-gray-500">{company.donation_field_text}</p>
-          )}
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            placeholder="Amount"
-            value={donationAmount}
-            onChange={(e) => setDonationAmount(e.target.value)}
-            className="w-full rounded-md border px-3 py-2"
-          />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Donation (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {company?.donation_field_text && (
+              <p className="text-sm text-muted-foreground">{company.donation_field_text}</p>
+            )}
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+                $
+              </span>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="0.00"
+                value={donationAmount}
+                onChange={(e) => setDonationAmount(e.target.value)}
+                className="pl-6"
+              />
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {(cardAllowed || cashAllowed) && (
-        <div className="space-y-2">
-          <h2 className="text-lg font-medium">Payment method</h2>
-          <div className="flex gap-4">
-            {cardAllowed && (
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={paymentMethod === "card"}
-                  onChange={() => setSelectedPaymentMethod("card")}
-                />
-                Card
-              </label>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Payment method</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(v) => setSelectedPaymentMethod(v as "card" | "cash")}
+              className="grid gap-2 sm:grid-cols-2"
+            >
+              {cardAllowed && (
+                <Label
+                  htmlFor="pm-card"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-lg border p-3 has-[[data-checked]]:border-primary has-[[data-checked]]:bg-primary/5"
+                >
+                  <RadioGroupItem value="card" id="pm-card" />
+                  <CreditCard className="size-4 text-muted-foreground" />
+                  Card
+                </Label>
+              )}
+              {cashAllowed && (
+                <Label
+                  htmlFor="pm-cash"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-lg border p-3 has-[[data-checked]]:border-primary has-[[data-checked]]:bg-primary/5"
+                >
+                  <RadioGroupItem value="cash" id="pm-cash" />
+                  <Banknote className="size-4 text-muted-foreground" />
+                  Cash (pay at event)
+                </Label>
+              )}
+            </RadioGroup>
+            {paymentMethod === "cash" && company?.cod_text && (
+              <p className="text-sm text-muted-foreground">{company.cod_text}</p>
             )}
-            {cashAllowed && (
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={paymentMethod === "cash"}
-                  onChange={() => setSelectedPaymentMethod("cash")}
-                />
-                Cash (pay at event)
-              </label>
-            )}
-          </div>
-          {paymentMethod === "cash" && company?.cod_text && (
-            <p className="text-sm text-gray-500">{company.cod_text}</p>
-          )}
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {showRegulation && (
-        <label className="flex items-start gap-2 text-sm text-gray-600">
-          <input
-            type="checkbox"
+        <Label htmlFor="reg-terms" className="flex items-start gap-2 text-sm font-normal text-muted-foreground">
+          <Checkbox
+            id="reg-terms"
             checked={agreedToRegulation}
-            onChange={(e) => setAgreedToRegulation(e.target.checked)}
-            className="mt-1"
+            onCheckedChange={(checked) => setAgreedToRegulation(checked === true)}
+            className="mt-0.5"
           />
           <span>
             {company?.regulation_text ?? "I agree to the terms and conditions for this event."}
           </span>
-        </label>
+        </Label>
       )}
 
       {ticketsSubtotal > 0 && (
-        <div className="space-y-1 rounded-lg border p-3 text-sm">
-          <div className="flex justify-between text-gray-500">
-            <span>Tickets</span>
-            <span>${ticketsSubtotal.toFixed(2)}</span>
-          </div>
-          {donationValue > 0 && (
-            <div className="flex justify-between text-gray-500">
-              <span>Donation</span>
-              <span>${donationValue.toFixed(2)}</span>
+        <Card className="bg-muted/40">
+          <CardContent className="space-y-1.5 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Tickets ({ticketCount})</span>
+              <span>${ticketsSubtotal.toFixed(2)}</span>
             </div>
-          )}
-          {showAppFee && estimatedPlatformFee > 0 && (
-            <div className="flex justify-between text-gray-500">
-              <span>
-                Platform fee ({platformFeePct}%)
-                {advance?.platform_fee_text ? ` — ${advance.platform_fee_text}` : ""}
-              </span>
-              <span>${estimatedPlatformFee.toFixed(2)}</span>
+            {donationValue > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Donation</span>
+                <span>${donationValue.toFixed(2)}</span>
+              </div>
+            )}
+            {showAppFee && estimatedPlatformFee > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>
+                  Platform fee ({platformFeePct}%)
+                  {advance?.platform_fee_text ? ` — ${advance.platform_fee_text}` : ""}
+                </span>
+                <span>${estimatedPlatformFee.toFixed(2)}</span>
+              </div>
+            )}
+            <Separator className="my-1" />
+            <div className="flex justify-between text-base font-semibold">
+              <span>Total</span>
+              <span>${estimatedTotal.toFixed(2)}</span>
             </div>
-          )}
-          <div className="flex justify-between border-t pt-1 font-medium text-black">
-            <span>Total</span>
-            <span>${estimatedTotal.toFixed(2)}</span>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <button
-        type="submit"
-        className="w-full rounded-md bg-black px-4 py-3 text-sm font-medium text-white"
-      >
+      <Button type="submit" size="lg" className="w-full">
+        <Ticket />
         Continue
-      </button>
+      </Button>
     </form>
   );
 }
