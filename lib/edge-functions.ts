@@ -7,6 +7,7 @@ export type ProductInput = {
   price: number;
   currency?: string;
   capacity?: number | null;
+  color?: string | null;
   sort_order?: number;
 };
 
@@ -24,8 +25,23 @@ export type SubEventInput = {
   products?: ProductInput[];
 };
 
+// Each flag is a tri-state: true/false pins an explicit per-event override,
+// undefined/omitted means "inherit from the company/platform default" (see
+// resolve_event_advance_settings). Mirrors the old system's EventMeta
+// (per-event) falling back to EventAdvance (per-company/admin default).
+export type EventAdvanceSettings = {
+  is_attendees_required?: boolean | null;
+  is_show_address?: boolean | null;
+  is_cash_allowed?: boolean | null;
+  is_donation_allowed?: boolean | null;
+  is_show_regulation?: boolean | null;
+  is_show_stripe?: boolean | null;
+  is_show_app_fee?: boolean | null;
+  is_enable_donation?: boolean | null;
+};
+
 export type CreateEventInput = {
-  company_id: string;
+  company_id: string | null;
   title: string;
   slug: string;
   description?: string | null;
@@ -34,6 +50,8 @@ export type CreateEventInput = {
   end_date: string;
   timezone?: string;
   sub_events?: SubEventInput[];
+  advance?: EventAdvanceSettings;
+  is_master_template?: boolean;
 };
 
 export type UpdateEventInput = {
@@ -46,6 +64,7 @@ export type UpdateEventInput = {
   end_date: string;
   timezone?: string;
   sub_events?: SubEventInput[];
+  advance?: EventAdvanceSettings;
 };
 
 async function invoke<TResponse>(

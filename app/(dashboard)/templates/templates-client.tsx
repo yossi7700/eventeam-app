@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { listMasterTemplates, templatesCache } from "@/lib/queries/templates";
 import { publishTemplateEvent } from "@/lib/edge-functions";
+import { getMyProfile, profileCache } from "@/lib/queries/profile";
 
 export function TemplatesClient() {
   const router = useRouter();
@@ -13,6 +15,12 @@ export function TemplatesClient() {
   const [slug, setSlug] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+
+  const { data: profile } = useQuery({
+    queryKey: profileCache.meKey,
+    queryFn: getMyProfile,
+  });
+  const isAdmin = profile?.role === "admin";
 
   const { data: templates, isPending, error } = useQuery({
     queryKey: templatesCache.listKey,
@@ -36,7 +44,17 @@ export function TemplatesClient() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Event Templates</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Event Templates</h1>
+        {isAdmin && (
+          <Link
+            href="/templates/new"
+            className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white"
+          >
+            + New Template
+          </Link>
+        )}
+      </div>
       <p className="text-sm text-gray-500">
         Publish a company event from an admin-provided template, with sub-event times computed
         relative to sunset for your chosen date and location.
@@ -55,12 +73,22 @@ export function TemplatesClient() {
             <li key={t.id} className="rounded-lg border p-4">
               <div className="flex items-center justify-between">
                 <p className="font-medium">{t.title}</p>
-                <button
-                  onClick={() => setPublishingId(publishingId === t.id ? null : t.id)}
-                  className="rounded-md border px-3 py-1.5 text-xs font-medium"
-                >
-                  {publishingId === t.id ? "Cancel" : "Publish"}
-                </button>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <Link
+                      href={`/templates/${t.id}/edit`}
+                      className="rounded-md border px-3 py-1.5 text-xs font-medium"
+                    >
+                      Edit
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => setPublishingId(publishingId === t.id ? null : t.id)}
+                    className="rounded-md border px-3 py-1.5 text-xs font-medium"
+                  >
+                    {publishingId === t.id ? "Cancel" : "Publish"}
+                  </button>
+                </div>
               </div>
 
               {publishingId === t.id && (

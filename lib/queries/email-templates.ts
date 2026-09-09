@@ -4,13 +4,15 @@ import type { Tables, TablesInsert, TablesUpdate, Enums } from "@/types/supabase
 export type EmailTemplate = Tables<"email_templates">;
 export type EmailTemplateKind = Enums<"email_template_kind">;
 
-export const EMAIL_TEMPLATE_KINDS: EmailTemplateKind[] = [
+// Excludes "otp_code" deliberately -- that kind is system-managed (sent by
+// the request-otp Edge Function) and not user-editable in this UI.
+export const EMAIL_TEMPLATE_KINDS = [
   "registration_confirmation",
   "thank_you",
   "company_signup",
   "company_approved",
   "company_rejected",
-];
+] as const satisfies readonly EmailTemplateKind[];
 
 export const emailTemplatesCache = {
   listKey: (companyId: string | null) => ["email_templates", companyId] as const,

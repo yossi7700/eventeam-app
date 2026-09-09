@@ -24,8 +24,19 @@ type SubEventInput = {
   products?: ProductInput[];
 };
 
+type EventAdvanceSettings = {
+  is_attendees_required?: boolean | null;
+  is_show_address?: boolean | null;
+  is_cash_allowed?: boolean | null;
+  is_donation_allowed?: boolean | null;
+  is_show_regulation?: boolean | null;
+  is_show_stripe?: boolean | null;
+  is_show_app_fee?: boolean | null;
+  is_enable_donation?: boolean | null;
+};
+
 type CreateEventInput = {
-  company_id: string;
+  company_id: string | null;
   title: string;
   slug: string;
   description?: string | null;
@@ -34,6 +45,8 @@ type CreateEventInput = {
   end_date: string;
   timezone?: string;
   sub_events?: SubEventInput[];
+  advance?: EventAdvanceSettings;
+  is_master_template?: boolean;
 };
 
 Deno.serve(async (req: Request) => {
@@ -51,18 +64,19 @@ Deno.serve(async (req: Request) => {
     return errorResponse("invalid JSON body", 400, corsHeaders);
   }
 
-  if (!body.company_id || !body.title || !body.slug || !body.start_date || !body.end_date) {
-    return errorResponse(
-      "company_id, title, slug, start_date, and end_date are required",
-      422,
-      corsHeaders
-    );
+  const isMasterTemplate = body.is_master_template ?? false;
+
+  if (!body.title || !body.slug || !body.start_date || !body.end_date) {
+    return errorResponse("title, slug, start_date, and end_date are required", 422, corsHeaders);
+  }
+  if (!isMasterTemplate && !body.company_id) {
+    return errorResponse("company_id is required unless is_master_template is set", 422, corsHeaders);
   }
 
   const supabase = createUserClient(req);
 
   const { data, error } = await supabase.rpc("create_event_with_children", {
-    p_company_id: body.company_id,
+    p_company_id: isMasterTemplate ? null : body.company_id,
     p_title: body.title,
     p_slug: body.slug,
     p_description: body.description ?? null,
@@ -71,6 +85,8 @@ Deno.serve(async (req: Request) => {
     p_end_date: body.end_date,
     p_timezone: body.timezone ?? null,
     p_sub_events: body.sub_events ?? [],
+    p_advance: body.advance ?? null,
+    p_is_master_template: isMasterTemplate,
   });
 
   if (error) {

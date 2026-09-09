@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { companiesCache, listAllCompanies } from "@/lib/queries/companies";
 import { approveCompany } from "@/lib/edge-functions";
@@ -47,7 +48,9 @@ export function CompaniesListClient() {
             <li key={company.id} className="space-y-2 px-4 py-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">{company.name}</p>
+                  <Link href={`/companies/${company.id}`} className="font-medium hover:underline">
+                    {company.name}
+                  </Link>
                   <p className="text-sm text-gray-500">{company.contact_email}</p>
                 </div>
                 <span

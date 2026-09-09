@@ -92,8 +92,17 @@ function FrontPageDesignForm({ companyId }: { companyId: string }) {
   const [aboutText, setAboutText] = useState(settings?.about_text ?? "");
   const [facebookUrl, setFacebookUrl] = useState(settings?.facebook_url ?? "");
   const [instagramUrl, setInstagramUrl] = useState(settings?.instagram_url ?? "");
+  const [twitterUrl, setTwitterUrl] = useState(settings?.twitter_url ?? "");
+  const [youtubeUrl, setYoutubeUrl] = useState(settings?.youtube_url ?? "");
   const [websiteUrl, setWebsiteUrl] = useState(settings?.website_url ?? "");
   const [customCss, setCustomCss] = useState(settings?.custom_css ?? "");
+  const [stepTitles, setStepTitles] = useState([
+    settings?.step_1_title ?? "",
+    settings?.step_2_title ?? "",
+    settings?.step_3_title ?? "",
+    settings?.step_4_title ?? "",
+    settings?.step_5_title ?? "",
+  ]);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -104,8 +113,15 @@ function FrontPageDesignForm({ companyId }: { companyId: string }) {
         about_text: aboutText || null,
         facebook_url: facebookUrl || null,
         instagram_url: instagramUrl || null,
+        twitter_url: twitterUrl || null,
+        youtube_url: youtubeUrl || null,
         website_url: websiteUrl || null,
         custom_css: customCss || null,
+        step_1_title: stepTitles[0] || null,
+        step_2_title: stepTitles[1] || null,
+        step_3_title: stepTitles[2] || null,
+        step_4_title: stepTitles[3] || null,
+        step_5_title: stepTitles[4] || null,
       }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: companySettingsCache.key(companyId) }),
@@ -159,7 +175,7 @@ function FrontPageDesignForm({ companyId }: { companyId: string }) {
         className="w-full rounded-md border px-3 py-2 text-sm"
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <input
           placeholder="Facebook URL"
           defaultValue={settings?.facebook_url ?? ""}
@@ -173,11 +189,42 @@ function FrontPageDesignForm({ companyId }: { companyId: string }) {
           className="rounded-md border px-3 py-2 text-sm"
         />
         <input
+          placeholder="Twitter / X URL"
+          defaultValue={settings?.twitter_url ?? ""}
+          onChange={(e) => setTwitterUrl(e.target.value)}
+          className="rounded-md border px-3 py-2 text-sm"
+        />
+        <input
+          placeholder="YouTube URL"
+          defaultValue={settings?.youtube_url ?? ""}
+          onChange={(e) => setYoutubeUrl(e.target.value)}
+          className="rounded-md border px-3 py-2 text-sm"
+        />
+        <input
           placeholder="Website URL"
           defaultValue={settings?.website_url ?? ""}
           onChange={(e) => setWebsiteUrl(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
+          className="col-span-2 rounded-md border px-3 py-2 text-sm"
         />
+      </div>
+
+      <div>
+        <span className="text-xs font-medium text-gray-500">
+          Registration flow step titles
+        </span>
+        <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-5">
+          {stepTitles.map((title, i) => (
+            <input
+              key={i}
+              placeholder={`Step ${i + 1}`}
+              value={title}
+              onChange={(e) =>
+                setStepTitles((prev) => prev.map((t, j) => (j === i ? e.target.value : t)))
+              }
+              className="rounded-md border px-2 py-1.5 text-sm"
+            />
+          ))}
+        </div>
       </div>
 
       <textarea
@@ -202,6 +249,143 @@ function FrontPageDesignForm({ companyId }: { companyId: string }) {
   );
 }
 
+// Tri-state mirrors the same "inherit from platform" cascade used on the
+// per-event advance settings (event-form-client.tsx) -- here "inherit"
+// means "fall back to the hardcoded platform default" instead of "fall
+// back to the company default", since this IS the company-default tier.
+type TriState = "inherit" | "on" | "off";
+
+const DEFAULT_FIELDS: { key: string; label: string }[] = [
+  { key: "default_is_attendees_required", label: "Require attendee contact details" },
+  { key: "default_is_show_address", label: "Ask for guest address" },
+  { key: "default_is_cash_allowed", label: "Allow cash payment" },
+  { key: "default_is_donation_allowed", label: "Allow donations" },
+  { key: "default_is_show_regulation", label: "Show terms & regulations" },
+  { key: "default_is_show_stripe", label: "Allow card payment (Stripe)" },
+  { key: "default_is_show_app_fee", label: "Show platform fee to guests" },
+  { key: "default_is_enable_donation", label: "Enable donation field by default" },
+];
+
+function EventDefaultsForm({ companyId }: { companyId: string }) {
+  const queryClient = useQueryClient();
+  const { data: settings, isPending } = useQuery({
+    queryKey: companySettingsCache.key(companyId),
+    queryFn: () => getCompanySettings(companyId),
+  });
+
+  const toTri = (v: boolean | null | undefined): TriState =>
+    v === null || v === undefined ? "inherit" : v ? "on" : "off";
+
+  const [defaults, setDefaults] = useState<Record<string, TriState>>({});
+  const [hydrated, setHydrated] = useState(false);
+  const [platformFeePct, setPlatformFeePct] = useState("");
+  const [platformFeeText, setPlatformFeeText] = useState("");
+
+  if (!hydrated && settings !== undefined) {
+    const next: Record<string, TriState> = {};
+    for (const { key } of DEFAULT_FIELDS) {
+      next[key] = toTri((settings as unknown as Record<string, boolean | null>)?.[key]);
+    }
+    setDefaults(next);
+    setPlatformFeePct(settings?.platform_fee_pct != null ? String(settings.platform_fee_pct) : "");
+    setPlatformFeeText(settings?.platform_fee_text ?? "");
+    setHydrated(true);
+  }
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      const patch: Record<string, boolean | number | string | null> = {
+        platform_fee_pct: platformFeePct === "" ? null : Number(platformFeePct),
+        platform_fee_text: platformFeeText || null,
+      };
+      for (const { key } of DEFAULT_FIELDS) {
+        patch[key] = defaults[key] === "inherit" ? null : defaults[key] === "on";
+      }
+      return updateCompanySettings(
+        companyId,
+        patch as Parameters<typeof updateCompanySettings>[1]
+      );
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: companySettingsCache.key(companyId) }),
+  });
+
+  if (isPending) return <div className="h-64 animate-pulse rounded-lg bg-gray-100" />;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutation.mutate();
+      }}
+      className="space-y-3 rounded-lg border p-4"
+    >
+      <div>
+        <h2 className="text-sm font-medium">Event defaults</h2>
+        <p className="text-xs text-gray-500">
+          These apply to every new event unless overridden on that event&apos;s own Advance
+          settings. Leave &quot;Platform default&quot; to use the platform-wide setting.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {DEFAULT_FIELDS.map(({ key, label }) => (
+          <div key={key} className="flex items-center justify-between gap-4">
+            <span className="text-sm">{label}</span>
+            <select
+              value={defaults[key] ?? "inherit"}
+              onChange={(e) =>
+                setDefaults((prev) => ({ ...prev, [key]: e.target.value as TriState }))
+              }
+              className="rounded-md border px-2 py-1 text-sm"
+            >
+              <option value="inherit">Platform default</option>
+              <option value="on">Yes</option>
+              <option value="off">No</option>
+            </select>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 border-t pt-3">
+        <label className="text-xs text-gray-500">
+          Platform fee %
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            placeholder="Use platform default"
+            value={platformFeePct}
+            onChange={(e) => setPlatformFeePct(e.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="text-xs text-gray-500">
+          Platform fee text shown to guests
+          <input
+            placeholder="e.g. Includes a 3% service fee"
+            value={platformFeeText}
+            onChange={(e) => setPlatformFeeText(e.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      {mutation.error && (
+        <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
+      )}
+      <button
+        type="submit"
+        disabled={mutation.isPending}
+        className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+      >
+        {mutation.isPending ? "Saving..." : "Save event defaults"}
+      </button>
+    </form>
+  );
+}
+
 export function CompanySettingsClient() {
   const { data: profile } = useQuery({
     queryKey: profileCache.meKey,
@@ -218,6 +402,7 @@ export function CompanySettingsClient() {
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-semibold">Company Settings</h1>
       <ProfileForm companyId={companyId} />
+      <EventDefaultsForm companyId={companyId} />
       <FrontPageDesignForm companyId={companyId} />
     </div>
   );

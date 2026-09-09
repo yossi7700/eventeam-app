@@ -26,6 +26,17 @@ type SubEventInput = {
   products?: ProductInput[];
 };
 
+type EventAdvanceSettings = {
+  is_attendees_required?: boolean | null;
+  is_show_address?: boolean | null;
+  is_cash_allowed?: boolean | null;
+  is_donation_allowed?: boolean | null;
+  is_show_regulation?: boolean | null;
+  is_show_stripe?: boolean | null;
+  is_show_app_fee?: boolean | null;
+  is_enable_donation?: boolean | null;
+};
+
 type UpdateEventInput = {
   event_id: string;
   title: string;
@@ -36,6 +47,7 @@ type UpdateEventInput = {
   end_date: string;
   timezone?: string;
   sub_events?: SubEventInput[];
+  advance?: EventAdvanceSettings;
 };
 
 Deno.serve(async (req: Request) => {
@@ -73,6 +85,7 @@ Deno.serve(async (req: Request) => {
     p_end_date: body.end_date,
     p_timezone: body.timezone ?? null,
     p_sub_events: body.sub_events ?? [],
+    p_advance: body.advance ?? null,
   });
 
   if (error) {

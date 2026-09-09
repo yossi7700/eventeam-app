@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -139,45 +139,96 @@ export type Database = {
           admin_commission_pct: number
           company_id: string
           custom_css: string | null
+          default_is_attendees_required: boolean | null
+          default_is_cash_allowed: boolean | null
+          default_is_donation_allowed: boolean | null
+          default_is_enable_donation: boolean | null
+          default_is_show_address: boolean | null
+          default_is_show_app_fee: boolean | null
+          default_is_show_regulation: boolean | null
+          default_is_show_stripe: boolean | null
           donation_excluded_from_commission: boolean
           facebook_url: string | null
           font_family: string | null
           hero_image_path: string | null
           instagram_url: string | null
+          platform_fee_pct: number | null
+          platform_fee_text: string | null
           primary_color: string | null
           secondary_color: string | null
+          step_1_title: string | null
+          step_2_title: string | null
+          step_3_title: string | null
+          step_4_title: string | null
+          step_5_title: string | null
+          twitter_url: string | null
           updated_at: string
           website_url: string | null
+          youtube_url: string | null
         }
         Insert: {
           about_text?: string | null
           admin_commission_pct?: number
           company_id: string
           custom_css?: string | null
+          default_is_attendees_required?: boolean | null
+          default_is_cash_allowed?: boolean | null
+          default_is_donation_allowed?: boolean | null
+          default_is_enable_donation?: boolean | null
+          default_is_show_address?: boolean | null
+          default_is_show_app_fee?: boolean | null
+          default_is_show_regulation?: boolean | null
+          default_is_show_stripe?: boolean | null
           donation_excluded_from_commission?: boolean
           facebook_url?: string | null
           font_family?: string | null
           hero_image_path?: string | null
           instagram_url?: string | null
+          platform_fee_pct?: number | null
+          platform_fee_text?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          step_1_title?: string | null
+          step_2_title?: string | null
+          step_3_title?: string | null
+          step_4_title?: string | null
+          step_5_title?: string | null
+          twitter_url?: string | null
           updated_at?: string
           website_url?: string | null
+          youtube_url?: string | null
         }
         Update: {
           about_text?: string | null
           admin_commission_pct?: number
           company_id?: string
           custom_css?: string | null
+          default_is_attendees_required?: boolean | null
+          default_is_cash_allowed?: boolean | null
+          default_is_donation_allowed?: boolean | null
+          default_is_enable_donation?: boolean | null
+          default_is_show_address?: boolean | null
+          default_is_show_app_fee?: boolean | null
+          default_is_show_regulation?: boolean | null
+          default_is_show_stripe?: boolean | null
           donation_excluded_from_commission?: boolean
           facebook_url?: string | null
           font_family?: string | null
           hero_image_path?: string | null
           instagram_url?: string | null
+          platform_fee_pct?: number | null
+          platform_fee_text?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          step_1_title?: string | null
+          step_2_title?: string | null
+          step_3_title?: string | null
+          step_4_title?: string | null
+          step_5_title?: string | null
+          twitter_url?: string | null
           updated_at?: string
           website_url?: string | null
+          youtube_url?: string | null
         }
         Relationships: [
           {
@@ -361,6 +412,14 @@ export type Database = {
           end_date: string
           id: string
           is_master_template: boolean
+          override_is_attendees_required: boolean | null
+          override_is_cash_allowed: boolean | null
+          override_is_donation_allowed: boolean | null
+          override_is_enable_donation: boolean | null
+          override_is_show_address: boolean | null
+          override_is_show_app_fee: boolean | null
+          override_is_show_regulation: boolean | null
+          override_is_show_stripe: boolean | null
           slug: string
           source: Database["public"]["Enums"]["event_source"]
           start_date: string
@@ -378,6 +437,14 @@ export type Database = {
           end_date: string
           id?: string
           is_master_template?: boolean
+          override_is_attendees_required?: boolean | null
+          override_is_cash_allowed?: boolean | null
+          override_is_donation_allowed?: boolean | null
+          override_is_enable_donation?: boolean | null
+          override_is_show_address?: boolean | null
+          override_is_show_app_fee?: boolean | null
+          override_is_show_regulation?: boolean | null
+          override_is_show_stripe?: boolean | null
           slug: string
           source?: Database["public"]["Enums"]["event_source"]
           start_date: string
@@ -395,6 +462,14 @@ export type Database = {
           end_date?: string
           id?: string
           is_master_template?: boolean
+          override_is_attendees_required?: boolean | null
+          override_is_cash_allowed?: boolean | null
+          override_is_donation_allowed?: boolean | null
+          override_is_enable_donation?: boolean | null
+          override_is_show_address?: boolean | null
+          override_is_show_app_fee?: boolean | null
+          override_is_show_regulation?: boolean | null
+          override_is_show_stripe?: boolean | null
           slug?: string
           source?: Database["public"]["Enums"]["event_source"]
           start_date?: string
@@ -659,19 +734,49 @@ export type Database = {
       platform_settings: {
         Row: {
           default_commission_pct: number
+          default_is_attendees_required: boolean
+          default_is_cash_allowed: boolean
+          default_is_donation_allowed: boolean
+          default_is_enable_donation: boolean
+          default_is_show_address: boolean
+          default_is_show_app_fee: boolean
+          default_is_show_regulation: boolean
+          default_is_show_stripe: boolean
           id: boolean
+          platform_fee_pct: number
+          platform_fee_text: string | null
           support_email: string | null
           updated_at: string
         }
         Insert: {
           default_commission_pct?: number
+          default_is_attendees_required?: boolean
+          default_is_cash_allowed?: boolean
+          default_is_donation_allowed?: boolean
+          default_is_enable_donation?: boolean
+          default_is_show_address?: boolean
+          default_is_show_app_fee?: boolean
+          default_is_show_regulation?: boolean
+          default_is_show_stripe?: boolean
           id?: boolean
+          platform_fee_pct?: number
+          platform_fee_text?: string | null
           support_email?: string | null
           updated_at?: string
         }
         Update: {
           default_commission_pct?: number
+          default_is_attendees_required?: boolean
+          default_is_cash_allowed?: boolean
+          default_is_donation_allowed?: boolean
+          default_is_enable_donation?: boolean
+          default_is_show_address?: boolean
+          default_is_show_app_fee?: boolean
+          default_is_show_regulation?: boolean
+          default_is_show_stripe?: boolean
           id?: boolean
+          platform_fee_pct?: number
+          platform_fee_text?: string | null
           support_email?: string | null
           updated_at?: string
         }
@@ -680,6 +785,7 @@ export type Database = {
       products: {
         Row: {
           capacity: number | null
+          color: string | null
           created_at: string
           currency: string
           description: string | null
@@ -693,6 +799,7 @@ export type Database = {
         }
         Insert: {
           capacity?: number | null
+          color?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -706,6 +813,7 @@ export type Database = {
         }
         Update: {
           capacity?: number | null
+          color?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -774,6 +882,7 @@ export type Database = {
           id: string
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
+          platform_fee_amount: number
           primary_guest_email: string
           primary_guest_name: string
           primary_guest_phone: string | null
@@ -791,6 +900,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          platform_fee_amount?: number
           primary_guest_email: string
           primary_guest_name: string
           primary_guest_phone?: string | null
@@ -808,6 +918,7 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          platform_fee_amount?: number
           primary_guest_email?: string
           primary_guest_name?: string
           primary_guest_phone?: string | null
@@ -1082,9 +1193,86 @@ export type Database = {
       }
     }
     Functions: {
+      approve_or_reject_company: {
+        Args: {
+          p_approve: boolean
+          p_company_id: string
+          p_rejected_reason: string
+        }
+        Returns: undefined
+      }
+      create_event_with_children: {
+        Args: {
+          p_advance?: Json
+          p_company_id: string
+          p_cover_image_path: string
+          p_description: string
+          p_end_date: string
+          p_slug: string
+          p_start_date: string
+          p_sub_events: Json
+          p_timezone: string
+          p_title: string
+        }
+        Returns: string
+      }
       flip_ended_events: { Args: never; Returns: undefined }
+      get_dashboard_kpis: { Args: never; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       my_company_id: { Args: never; Returns: string }
+      register_guest_for_event: {
+        Args: {
+          p_donations: Json
+          p_event_id: string
+          p_guests: Json
+          p_payment_method: Database["public"]["Enums"]["payment_method"]
+          p_primary_guest_email: string
+          p_primary_guest_name: string
+          p_primary_guest_phone: string
+        }
+        Returns: {
+          currency: string
+          registration_id: string
+          total_amount: number
+        }[]
+      }
+      resolve_event_advance_settings: {
+        Args: { p_event_id: string }
+        Returns: {
+          is_attendees_required: boolean
+          is_cash_allowed: boolean
+          is_donation_allowed: boolean
+          is_enable_donation: boolean
+          is_show_address: boolean
+          is_show_app_fee: boolean
+          is_show_regulation: boolean
+          is_show_stripe: boolean
+          platform_fee_pct: number
+          platform_fee_text: string
+        }[]
+      }
+      update_event_with_children: {
+        Args: {
+          p_advance?: Json
+          p_cover_image_path: string
+          p_description: string
+          p_end_date: string
+          p_event_id: string
+          p_slug: string
+          p_start_date: string
+          p_sub_events: Json
+          p_timezone: string
+          p_title: string
+        }
+        Returns: undefined
+      }
+      verify_and_consume_otp: {
+        Args: {
+          p_code: string
+          p_purpose: Database["public"]["Enums"]["otp_purpose"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       company_status: "pending" | "active" | "suspended" | "rejected"
@@ -1094,6 +1282,7 @@ export type Database = {
         | "company_signup"
         | "company_approved"
         | "company_rejected"
+        | "otp_code"
       event_source: "standalone" | "published_from_template"
       event_status: "draft" | "active" | "ended" | "cancelled"
       otp_purpose:
@@ -1133,12 +1322,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1162,11 +1351,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1187,11 +1376,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1212,11 +1401,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1229,11 +1418,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1252,6 +1441,7 @@ export const Constants = {
         "company_signup",
         "company_approved",
         "company_rejected",
+        "otp_code",
       ],
       event_source: ["standalone", "published_from_template"],
       event_status: ["draft", "active", "ended", "cancelled"],

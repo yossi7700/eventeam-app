@@ -9,14 +9,83 @@ import {
   getEventWithChildren,
   type EventWithChildren,
 } from "@/lib/queries/events";
-import { createEvent, updateEvent, type SubEventInput } from "@/lib/edge-functions";
+import { templatesCache } from "@/lib/queries/templates";
+import {
+  createEvent,
+  updateEvent,
+  type EventAdvanceSettings,
+  type SubEventInput,
+} from "@/lib/edge-functions";
 
 type FormProduct = {
   id?: string;
   name: string;
   price: string;
   capacity: string;
+  color: string;
 };
+
+// Tri-state: "inherit" means "don't send an override, use the company/
+// platform default" (matches the old EventMeta-falls-back-to-EventAdvance
+// cascade); "on"/"off" pins an explicit per-event override.
+type TriState = "inherit" | "on" | "off";
+
+type FormAdvance = Record<keyof EventAdvanceSettings, TriState>;
+
+const ADVANCE_FIELDS: { key: keyof EventAdvanceSettings; label: string }[] = [
+  { key: "is_attendees_required", label: "Require attendee contact details" },
+  { key: "is_show_address", label: "Ask for guest address" },
+  { key: "is_cash_allowed", label: "Allow cash payment" },
+  { key: "is_donation_allowed", label: "Allow donations" },
+  { key: "is_show_regulation", label: "Show terms & regulations" },
+  { key: "is_show_stripe", label: "Allow card payment (Stripe)" },
+  { key: "is_show_app_fee", label: "Show platform fee to guests" },
+  { key: "is_enable_donation", label: "Enable donation field on this event" },
+];
+
+function emptyAdvance(): FormAdvance {
+  return {
+    is_attendees_required: "inherit",
+    is_show_address: "inherit",
+    is_cash_allowed: "inherit",
+    is_donation_allowed: "inherit",
+    is_show_regulation: "inherit",
+    is_show_stripe: "inherit",
+    is_show_app_fee: "inherit",
+    is_enable_donation: "inherit",
+  };
+}
+
+function advanceFromExisting(event: {
+  override_is_attendees_required: boolean | null;
+  override_is_show_address: boolean | null;
+  override_is_cash_allowed: boolean | null;
+  override_is_donation_allowed: boolean | null;
+  override_is_show_regulation: boolean | null;
+  override_is_show_stripe: boolean | null;
+  override_is_show_app_fee: boolean | null;
+  override_is_enable_donation: boolean | null;
+}): FormAdvance {
+  const toTri = (v: boolean | null): TriState => (v === null ? "inherit" : v ? "on" : "off");
+  return {
+    is_attendees_required: toTri(event.override_is_attendees_required),
+    is_show_address: toTri(event.override_is_show_address),
+    is_cash_allowed: toTri(event.override_is_cash_allowed),
+    is_donation_allowed: toTri(event.override_is_donation_allowed),
+    is_show_regulation: toTri(event.override_is_show_regulation),
+    is_show_stripe: toTri(event.override_is_show_stripe),
+    is_show_app_fee: toTri(event.override_is_show_app_fee),
+    is_enable_donation: toTri(event.override_is_enable_donation),
+  };
+}
+
+function advanceToPayload(advance: FormAdvance): EventAdvanceSettings {
+  const out: EventAdvanceSettings = {};
+  for (const { key } of ADVANCE_FIELDS) {
+    out[key] = advance[key] === "inherit" ? null : advance[key] === "on";
+  }
+  return out;
+}
 
 type FormSubEvent = {
   id?: string;
@@ -34,10 +103,11 @@ type FormState = {
   start_date: string;
   end_date: string;
   sub_events: FormSubEvent[];
+  advance: FormAdvance;
 };
 
 function emptyProduct(): FormProduct {
-  return { name: "", price: "", capacity: "" };
+  return { name: "", price: "", capacity: "", color: "" };
 }
 
 function emptySubEvent(): FormSubEvent {
@@ -71,8 +141,10 @@ function fromExisting(event: EventWithChildren): FormState {
         name: p.name,
         price: String(p.price),
         capacity: p.capacity != null ? String(p.capacity) : "",
+        color: p.color ?? "",
       })),
     })),
+    advance: advanceFromExisting(event),
   };
 }
 
@@ -89,6 +161,7 @@ function toSubEventsPayload(subEvents: FormSubEvent[]): SubEventInput[] {
       name: p.name,
       price: Number(p.price),
       capacity: p.capacity ? Number(p.capacity) : null,
+      color: p.color || null,
       sort_order: pIndex,
     })),
   }));
@@ -97,9 +170,12 @@ function toSubEventsPayload(subEvents: FormSubEvent[]): SubEventInput[] {
 export function EventFormClient({
   mode,
   eventId,
+  isTemplate = false,
 }: {
   mode: "create" | "edit";
   eventId?: string;
+  /** Admin-only master-template mode: no company_id, is_master_template = true. */
+  isTemplate?: boolean;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -124,6 +200,7 @@ export function EventFormClient({
       start_date: "",
       end_date: "",
       sub_events: [emptySubEvent()],
+      advance: emptyAdvance(),
     }
   );
   const [hydrated, setHydrated] = useState(mode === "create");
@@ -137,16 +214,20 @@ export function EventFormClient({
     mutationFn: async () => {
       const sub_events = toSubEventsPayload(form.sub_events);
 
+      const advance = advanceToPayload(form.advance);
+
       if (mode === "create") {
-        if (!companyId) throw new Error("No company found for this account.");
+        if (!isTemplate && !companyId) throw new Error("No company found for this account.");
         return createEvent({
-          company_id: companyId,
+          company_id: isTemplate ? null : companyId,
           title: form.title,
           slug: form.slug,
           description: form.description || null,
           start_date: new Date(form.start_date).toISOString(),
           end_date: new Date(form.end_date).toISOString(),
           sub_events,
+          advance,
+          is_master_template: isTemplate,
         });
       }
 
@@ -158,9 +239,15 @@ export function EventFormClient({
         start_date: new Date(form.start_date).toISOString(),
         end_date: new Date(form.end_date).toISOString(),
         sub_events,
+        advance,
       });
     },
     onSuccess: async (data) => {
+      if (isTemplate) {
+        await queryClient.invalidateQueries({ queryKey: templatesCache.listKey });
+        router.push(`/templates/${data.event_id}/edit`);
+        return;
+      }
       await queryClient.invalidateQueries({ queryKey: eventsCache.listKey(companyId) });
       if (mode === "edit" && eventId) {
         await queryClient.invalidateQueries({ queryKey: eventsCache.detailKey(eventId) });
@@ -178,6 +265,10 @@ export function EventFormClient({
       ...f,
       sub_events: f.sub_events.map((se, i) => (i === index ? { ...se, ...patch } : se)),
     }));
+  }
+
+  function updateAdvance(key: keyof EventAdvanceSettings, value: TriState) {
+    setForm((f) => ({ ...f, advance: { ...f.advance, [key]: value } }));
   }
 
   function updateProduct(seIndex: number, pIndex: number, patch: Partial<FormProduct>) {
@@ -203,7 +294,13 @@ export function EventFormClient({
       className="max-w-2xl space-y-8"
     >
       <h1 className="text-2xl font-semibold">
-        {mode === "create" ? "New Event" : "Edit Event"}
+        {isTemplate
+          ? mode === "create"
+            ? "New Template"
+            : "Edit Template"
+          : mode === "create"
+            ? "New Event"
+            : "Edit Event"}
       </h1>
 
       <div className="space-y-4">
@@ -334,7 +431,7 @@ export function EventFormClient({
                 </button>
               </div>
               {se.products.map((p, pIndex) => (
-                <div key={pIndex} className="grid grid-cols-4 gap-2">
+                <div key={pIndex} className="grid grid-cols-5 gap-2">
                   <input
                     required
                     placeholder="Name"
@@ -360,11 +457,44 @@ export function EventFormClient({
                     }
                     className="rounded-md border px-2 py-1.5 text-sm"
                   />
+                  <input
+                    type="color"
+                    title="Ticket color"
+                    value={p.color || "#e5e7eb"}
+                    onChange={(e) => updateProduct(seIndex, pIndex, { color: e.target.value })}
+                    className="h-9 w-full rounded-md border"
+                  />
                 </div>
               ))}
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-lg font-medium">Advance settings</h2>
+          <p className="text-sm text-gray-500">
+            Leave a setting on &quot;Default&quot; to inherit your company/platform default;
+            pick Yes/No to override it just for this event.
+          </p>
+        </div>
+        <div className="space-y-2 rounded-lg border p-4">
+          {ADVANCE_FIELDS.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between gap-4">
+              <span className="text-sm">{label}</span>
+              <select
+                value={form.advance[key]}
+                onChange={(e) => updateAdvance(key, e.target.value as TriState)}
+                className="rounded-md border px-2 py-1 text-sm"
+              >
+                <option value="inherit">Default</option>
+                <option value="on">Yes</option>
+                <option value="off">No</option>
+              </select>
+            </div>
+          ))}
+        </div>
       </div>
 
       {mutation.error && (

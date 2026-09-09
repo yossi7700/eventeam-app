@@ -12,7 +12,7 @@ import {
   type EmailTemplateKind,
 } from "@/lib/queries/email-templates";
 
-const kindLabels: Record<EmailTemplateKind, string> = {
+const kindLabels: Record<(typeof EMAIL_TEMPLATE_KINDS)[number], string> = {
   registration_confirmation: "Registration Confirmation",
   thank_you: "Thank You",
   company_signup: "Company Signup",
