@@ -7,6 +7,7 @@ import { getMyProfile, profileCache } from "@/lib/queries/profile";
 import {
   eventsCache,
   getEventWithChildren,
+  getSoldQuantitiesByProduct,
   type EventWithChildren,
 } from "@/lib/queries/events";
 import { templatesCache } from "@/lib/queries/templates";
@@ -204,6 +205,20 @@ export function EventFormClient({
     queryKey: mode === "edit" && eventId ? eventsCache.detailKey(eventId) : ["events", "new"],
     queryFn: () => getEventWithChildren(eventId!),
     enabled: mode === "edit" && !!eventId,
+  });
+
+  const existingProductIds = (existingEvent?.sub_events ?? []).flatMap((se) =>
+    se.products.map((p) => p.id)
+  );
+
+  // Gap-audit item: old EventController::getEventDetail computed
+  // remaining_seats per sub-event against its capacity; the edit form
+  // could change capacity but never showed how many tickets were already
+  // sold against it.
+  const { data: soldByProduct } = useQuery({
+    queryKey: ["events", "sold-quantities", eventId],
+    queryFn: () => getSoldQuantitiesByProduct(existingProductIds),
+    enabled: mode === "edit" && existingProductIds.length > 0,
   });
 
   const [form, setForm] = useState<FormState>(() =>
@@ -468,42 +483,53 @@ export function EventFormClient({
                   + Add ticket type
                 </button>
               </div>
-              {se.products.map((p, pIndex) => (
-                <div key={pIndex} className="grid grid-cols-5 gap-2">
-                  <input
-                    required
-                    placeholder="Name"
-                    value={p.name}
-                    onChange={(e) => updateProduct(seIndex, pIndex, { name: e.target.value })}
-                    className="col-span-2 rounded-md border px-2 py-1.5 text-sm"
-                  />
-                  <input
-                    required
-                    type="number"
-                    step="0.01"
-                    placeholder="Price"
-                    value={p.price}
-                    onChange={(e) => updateProduct(seIndex, pIndex, { price: e.target.value })}
-                    className="rounded-md border px-2 py-1.5 text-sm"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Capacity"
-                    value={p.capacity}
-                    onChange={(e) =>
-                      updateProduct(seIndex, pIndex, { capacity: e.target.value })
-                    }
-                    className="rounded-md border px-2 py-1.5 text-sm"
-                  />
-                  <input
-                    type="color"
-                    title="Ticket color"
-                    value={p.color || "#e5e7eb"}
-                    onChange={(e) => updateProduct(seIndex, pIndex, { color: e.target.value })}
-                    className="h-9 w-full rounded-md border"
-                  />
-                </div>
-              ))}
+              {se.products.map((p, pIndex) => {
+                const sold = p.id ? soldByProduct?.[p.id] : undefined;
+                return (
+                  <div key={pIndex} className="space-y-1">
+                    <div className="grid grid-cols-5 gap-2">
+                      <input
+                        required
+                        placeholder="Name"
+                        value={p.name}
+                        onChange={(e) => updateProduct(seIndex, pIndex, { name: e.target.value })}
+                        className="col-span-2 rounded-md border px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        required
+                        type="number"
+                        step="0.01"
+                        placeholder="Price"
+                        value={p.price}
+                        onChange={(e) => updateProduct(seIndex, pIndex, { price: e.target.value })}
+                        className="rounded-md border px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Capacity"
+                        value={p.capacity}
+                        onChange={(e) =>
+                          updateProduct(seIndex, pIndex, { capacity: e.target.value })
+                        }
+                        className="rounded-md border px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        type="color"
+                        title="Ticket color"
+                        value={p.color || "#e5e7eb"}
+                        onChange={(e) => updateProduct(seIndex, pIndex, { color: e.target.value })}
+                        className="h-9 w-full rounded-md border"
+                      />
+                    </div>
+                    {sold != null && sold > 0 && (
+                      <p className="pl-2 text-xs text-gray-500">
+                        {sold} sold
+                        {p.capacity && ` · ${Math.max(Number(p.capacity) - sold, 0)} remaining`}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {se.id && <SubEventActivitiesManager subEventId={se.id} />}

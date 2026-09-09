@@ -51,6 +51,35 @@ export async function getEventWithChildren(
   return data as EventWithChildren | null;
 }
 
+// Gap-audit item: old system's EventController::getEventDetail computed
+// remaining_seats per sub-event (capacity - taken seats) on the company's
+// own event-detail response. The dashboard event edit page can edit
+// capacity but never showed how many tickets are already sold against
+// it. guest_line_items already has a company-scoped RLS select policy
+// (their own event's registrations), so this reads it directly rather
+// than going through the public-only availability view (which requires
+// the event to be active/ended, excluding drafts a company is still
+// editing).
+export async function getSoldQuantitiesByProduct(
+  productIds: string[]
+): Promise<Record<string, number>> {
+  if (productIds.length === 0) return {};
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("guest_line_items")
+    .select("product_id, quantity")
+    .in("product_id", productIds);
+
+  if (error) throw new Error(error.message);
+
+  const sold: Record<string, number> = {};
+  for (const row of data ?? []) {
+    if (!row.product_id) continue;
+    sold[row.product_id] = (sold[row.product_id] ?? 0) + (row.quantity ?? 0);
+  }
+  return sold;
+}
+
 export async function deleteEvent(eventId: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("events").delete().eq("id", eventId);
