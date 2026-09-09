@@ -290,6 +290,8 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
   const [regulationText, setRegulationText] = useState("");
   const [donationFieldText, setDonationFieldText] = useState("");
   const [codText, setCodText] = useState("");
+  const [beforeSunsetMinutes, setBeforeSunsetMinutes] = useState("");
+  const [afterSunsetMinutes, setAfterSunsetMinutes] = useState("");
 
   if (!hydrated && settings !== undefined) {
     const next: Record<string, TriState> = {};
@@ -302,6 +304,12 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
     setRegulationText(settings?.regulation_text ?? "");
     setDonationFieldText(settings?.donation_field_text ?? "");
     setCodText(settings?.cod_text ?? "");
+    setBeforeSunsetMinutes(
+      settings?.before_sunset_minutes != null ? String(settings.before_sunset_minutes) : ""
+    );
+    setAfterSunsetMinutes(
+      settings?.after_sunset_minutes != null ? String(settings.after_sunset_minutes) : ""
+    );
     setHydrated(true);
   }
 
@@ -313,6 +321,8 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
         regulation_text: regulationText || null,
         donation_field_text: donationFieldText || null,
         cod_text: codText || null,
+        before_sunset_minutes: beforeSunsetMinutes === "" ? null : Number(beforeSunsetMinutes),
+        after_sunset_minutes: afterSunsetMinutes === "" ? null : Number(afterSunsetMinutes),
       };
       for (const { key } of DEFAULT_FIELDS) {
         patch[key] = defaults[key] === "inherit" ? null : defaults[key] === "on";
@@ -383,6 +393,29 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
             placeholder="e.g. Includes a 3% service fee"
             value={platformFeeText}
             onChange={(e) => setPlatformFeeText(e.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 border-t pt-3">
+        <label className="text-xs text-gray-500">
+          Candle-lighting minutes before sunset
+          <input
+            type="number"
+            placeholder="Hebcal default (18)"
+            value={beforeSunsetMinutes}
+            onChange={(e) => setBeforeSunsetMinutes(e.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="text-xs text-gray-500">
+          Minutes after sunset (for second-event timing)
+          <input
+            type="number"
+            placeholder="Optional"
+            value={afterSunsetMinutes}
+            onChange={(e) => setAfterSunsetMinutes(e.target.value)}
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
           />
         </label>

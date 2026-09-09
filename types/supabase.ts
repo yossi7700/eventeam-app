@@ -158,6 +158,8 @@ export type Database = {
         Row: {
           about_text: string | null
           admin_commission_pct: number
+          after_sunset_minutes: number | null
+          before_sunset_minutes: number | null
           cod_text: string | null
           company_id: string
           custom_css: string | null
@@ -193,6 +195,8 @@ export type Database = {
         Insert: {
           about_text?: string | null
           admin_commission_pct?: number
+          after_sunset_minutes?: number | null
+          before_sunset_minutes?: number | null
           cod_text?: string | null
           company_id: string
           custom_css?: string | null
@@ -228,6 +232,8 @@ export type Database = {
         Update: {
           about_text?: string | null
           admin_commission_pct?: number
+          after_sunset_minutes?: number | null
+          before_sunset_minutes?: number | null
           cod_text?: string | null
           company_id?: string
           custom_css?: string | null

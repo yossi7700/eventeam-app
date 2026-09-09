@@ -2,9 +2,22 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { errorResponse, jsonResponse } from "../_shared/supabase.ts";
 import { handleCors } from "../_shared/cors.ts";
 
-// Wraps hebcal.com's public Zmanim (halachic times) API. Used by
-// publish-template-event to compute sub-event start times relative to
-// sunset/candle-lighting for a given date and location.
+// Wraps two separate hebcal.com APIs:
+//  - /zmanim for plain astronomical sunset (accepts geonameid or lat/long).
+//  - /shabbat for candle-lighting and havdalah, which -- caught on
+//    re-verifying against the old system's getHebTime() -- is a genuinely
+//    different endpoint with different fields; /zmanim's response has NO
+//    candlelighting or havdalah keys at all (confirmed against hebcal's own
+//    docs), so this function's earlier version was silently always
+//    returning null for both, dead code masquerading as working. /shabbat
+//    only accepts geonameid (no raw lat/long), matching the old system's
+//    own getGeonameId()-or-nothing usage.
+//
+// before_sunset_minutes maps to the old system's before_sunset_time
+// setting (candle-lighting minutes before sunset; hebcal defaults to 18
+// when omitted, same as the old system's implicit "?? 0" not quite
+// matching hebcal's own default -- passed through only when provided so
+// hebcal's default applies otherwise).
 //
 // hebcal.com has no test/sandbox mode, so this function's only real
 // failure path (the API being unreachable, or the geonameid/lat-lon being
@@ -17,6 +30,7 @@ type SunsetTimesInput = {
   latitude?: number;
   longitude?: number;
   timezone?: string;
+  before_sunset_minutes?: number;
 };
 
 Deno.serve(async (req: Request) => {
@@ -40,6 +54,9 @@ Deno.serve(async (req: Request) => {
         ? Number(url.searchParams.get("longitude"))
         : undefined,
       timezone: url.searchParams.get("timezone") ?? undefined,
+      before_sunset_minutes: url.searchParams.get("before_sunset_minutes")
+        ? Number(url.searchParams.get("before_sunset_minutes"))
+        : undefined,
     };
   } else {
     try {
@@ -56,31 +73,72 @@ Deno.serve(async (req: Request) => {
     return errorResponse("either geonameid or latitude+longitude is required", 422, corsHeaders);
   }
 
-  const hebcalUrl = new URL("https://www.hebcal.com/zmanim");
-  hebcalUrl.searchParams.set("cfg", "json");
-  hebcalUrl.searchParams.set("date", input.date);
+  const zmanimUrl = new URL("https://www.hebcal.com/zmanim");
+  zmanimUrl.searchParams.set("cfg", "json");
+  zmanimUrl.searchParams.set("date", input.date);
   if (input.geonameid) {
-    hebcalUrl.searchParams.set("geonameid", input.geonameid);
+    zmanimUrl.searchParams.set("geonameid", input.geonameid);
   } else {
-    hebcalUrl.searchParams.set("latitude", String(input.latitude));
-    hebcalUrl.searchParams.set("longitude", String(input.longitude));
-    if (input.timezone) hebcalUrl.searchParams.set("tzid", input.timezone);
+    zmanimUrl.searchParams.set("latitude", String(input.latitude));
+    zmanimUrl.searchParams.set("longitude", String(input.longitude));
+    if (input.timezone) zmanimUrl.searchParams.set("tzid", input.timezone);
   }
 
   try {
-    const response = await fetch(hebcalUrl.toString());
-    if (!response.ok) {
-      throw new Error(`hebcal.com returned ${response.status}`);
+    const zmanimResponse = await fetch(zmanimUrl.toString());
+    if (!zmanimResponse.ok) {
+      throw new Error(`hebcal.com/zmanim returned ${zmanimResponse.status}`);
     }
-    const data = await response.json();
+    const zmanimData = await zmanimResponse.json();
+    const sunset: string | null = zmanimData.times?.sunset ?? null;
+
+    // Candle-lighting/havdalah only come from /shabbat, and only when a
+    // geonameid is available (that endpoint has no raw lat/long mode,
+    // matching the old system's own getGeonameId()-or-nothing usage).
+    let candleLighting: string | null = null;
+    let havdalah: string | null = null;
+
+    if (input.geonameid) {
+      const [y, m, d] = input.date.split("-");
+      const shabbatUrl = new URL("https://www.hebcal.com/shabbat");
+      shabbatUrl.searchParams.set("cfg", "json");
+      shabbatUrl.searchParams.set("geonameid", input.geonameid);
+      shabbatUrl.searchParams.set("gy", y);
+      shabbatUrl.searchParams.set("gm", String(Number(m)));
+      shabbatUrl.searchParams.set("gd", String(Number(d)));
+      if (input.before_sunset_minutes != null) {
+        shabbatUrl.searchParams.set("b", String(input.before_sunset_minutes));
+      }
+
+      const havdalahUrl = new URL(shabbatUrl.toString());
+      havdalahUrl.searchParams.set("M", "on");
+
+      const [candlesResponse, havdalahResponse] = await Promise.all([
+        fetch(shabbatUrl.toString()),
+        fetch(havdalahUrl.toString()),
+      ]);
+
+      if (candlesResponse.ok) {
+        const candlesData = await candlesResponse.json();
+        candleLighting =
+          (candlesData.items ?? []).find((i: { category: string }) => i.category === "candles")
+            ?.date ?? null;
+      }
+      if (havdalahResponse.ok) {
+        const havdalahData = await havdalahResponse.json();
+        havdalah =
+          (havdalahData.items ?? []).find((i: { category: string }) => i.category === "havdalah")
+            ?.date ?? null;
+      }
+    }
 
     return jsonResponse(
       {
         date: input.date,
-        sunset: data.times?.sunset ?? null,
-        candle_lighting: data.times?.candlelighting ?? null,
-        havdalah: data.times?.havdalah ?? null,
-        raw: data.times ?? null,
+        sunset,
+        candle_lighting: candleLighting,
+        havdalah,
+        raw: zmanimData.times ?? null,
       },
       200,
       corsHeaders

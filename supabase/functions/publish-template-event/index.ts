@@ -89,6 +89,16 @@ Deno.serve(async (req: Request) => {
 
   let sunsetTime: Date | null = null;
   if (needsSunset) {
+    // before_sunset_minutes is the company's candle-lighting offset (old
+    // system's before_sunset_time) -- only meaningful when hebcal can
+    // resolve a geonameid-based candle-lighting time; harmless to pass
+    // when using raw lat/long since sunset-times ignores it in that case.
+    const { data: companySettings } = await serviceClient
+      .from("company_settings")
+      .select("before_sunset_minutes")
+      .eq("company_id", company.id)
+      .maybeSingle();
+
     const sunsetUrl = new URL(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sunset-times`);
     sunsetUrl.searchParams.set("date", body.target_date);
     if (body.geonameid) {
@@ -96,6 +106,12 @@ Deno.serve(async (req: Request) => {
     } else {
       sunsetUrl.searchParams.set("latitude", String(body.latitude));
       sunsetUrl.searchParams.set("longitude", String(body.longitude));
+    }
+    if (companySettings?.before_sunset_minutes != null) {
+      sunsetUrl.searchParams.set(
+        "before_sunset_minutes",
+        String(companySettings.before_sunset_minutes)
+      );
     }
 
     const sunsetResponse = await fetch(sunsetUrl.toString(), {
@@ -111,14 +127,20 @@ Deno.serve(async (req: Request) => {
     }
 
     const sunsetData = await sunsetResponse.json();
-    if (!sunsetData.sunset) {
+    // Anchor sunset-relative sub-events to candle-lighting time when
+    // available (matches the old system's actual semantics -- companies
+    // configure events relative to candle-lighting, not raw astronomical
+    // sunset), falling back to plain sunset when hebcal couldn't resolve
+    // candle-lighting for this location (e.g. raw lat/long input).
+    const anchor = sunsetData.candle_lighting ?? sunsetData.sunset;
+    if (!anchor) {
       return errorResponse(
-        "sunset-times returned no sunset value for this date/location",
+        "sunset-times returned no usable time for this date/location",
         502,
         corsHeaders
       );
     }
-    sunsetTime = new Date(sunsetData.sunset);
+    sunsetTime = new Date(anchor);
   }
 
   const dayStart = new Date(`${body.target_date}T00:00:00Z`);
