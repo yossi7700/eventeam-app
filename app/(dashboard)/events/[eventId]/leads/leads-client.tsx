@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { leadsCache, listRegistrationsForEvent } from "@/lib/queries/leads";
+import { leadsCache, listRegistrationsForEvent, type RegistrationWithGuests } from "@/lib/queries/leads";
 import { exportLeadsCsv, markCashCleared, notifyCashPending } from "@/lib/edge-functions";
 
 const paymentStatusStyles: Record<string, string> = {
@@ -16,6 +16,51 @@ const cashStatusStyles: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   cleared_manually: "bg-green-100 text-green-800",
 };
+
+// Mirrors the old system's eventRegistrationStats(): total registrations,
+// total guests, total amount, cash cleared, cash pending -- shown here for
+// the first time (the old event-detail page surfaced these but nothing in
+// the rebuild did).
+function EventStatsSummary({ registrations }: { registrations: RegistrationWithGuests[] }) {
+  const totalRegistrations = registrations.length;
+  const totalGuests = registrations.reduce((sum, r) => sum + r.guests.length, 0);
+  const totalAmount = registrations.reduce((sum, r) => sum + Number(r.total_amount), 0);
+  const cashCleared = registrations.reduce(
+    (sum, r) =>
+      sum +
+      r.guest_payments
+        .filter((p) => p.method === "cash" && p.status === "cleared_manually")
+        .reduce((s, p) => s + Number(p.amount), 0),
+    0
+  );
+  const cashPending = registrations.reduce(
+    (sum, r) =>
+      sum +
+      r.guest_payments
+        .filter((p) => p.method === "cash" && p.status === "pending")
+        .reduce((s, p) => s + Number(p.amount), 0),
+    0
+  );
+
+  const tiles: [string, string][] = [
+    ["Registrations", String(totalRegistrations)],
+    ["Guests", String(totalGuests)],
+    ["Total amount", `$${totalAmount.toFixed(2)}`],
+    ["Cash cleared", `$${cashCleared.toFixed(2)}`],
+    ["Cash pending", `$${cashPending.toFixed(2)}`],
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      {tiles.map(([label, value]) => (
+        <div key={label} className="rounded-lg border p-3">
+          <p className="text-xs text-gray-500">{label}</p>
+          <p className="mt-1 text-lg font-semibold">{value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function LeadsClient({ eventId }: { eventId: string }) {
   const queryClient = useQueryClient();
@@ -82,6 +127,10 @@ export function LeadsClient({ eventId }: { eventId: string }) {
 
       {registrations && registrations.length === 0 && (
         <p className="text-sm text-gray-500">No registrations yet for this event.</p>
+      )}
+
+      {registrations && registrations.length > 0 && (
+        <EventStatsSummary registrations={registrations} />
       )}
 
       {registrations && registrations.length > 0 && (
