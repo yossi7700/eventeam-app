@@ -1,24 +1,13 @@
--- Extends register_guest_for_event to:
---  1. Compute platform_fee_amount separately from commission_amount, using
---     the event -> company -> platform cascade added in 20260909000001
---     (gap-audit item 2 -- old system's getPlateformFee() was a distinct
---     fee from calculateAdminCommission(), not the same number). Base
---     amount corrected in 20260909000013 to (subtotal + donations),
---     matching the old system's live formula in
---     EventRegistrationController::bookEventsRegisteration
---     ($pf = (plateform_fee/100) * $amount, where $amount already
---     includes donations via countAmountBasedOnGuests()) -- this file is
---     kept as originally written (subtotal only) for migration history.
---  2. Enforce is_cash_allowed and is_donation_allowed server-side instead of
---     trusting the client to only offer the choices it was shown -- a
---     public/anon-callable RPC must not rely on the UI hiding an option.
---  3. Enforce is_attendees_required: when the resolved setting is true,
---     every guest must have a non-empty email or phone (mirrors the old
---     system's "first guest must have name/email/phone" checks, generalized
---     to "attendees required" meaning full contact details are mandatory).
-
-alter table public.registrations
-  add column platform_fee_amount numeric(12,2) not null default 0;
+-- Bug fix caught by re-verifying against the old system's actual live
+-- booking-flow code (EventRegistrationController::bookEventsRegisteration,
+-- not the unused countAmountBasedOnGuests()/dead-path variant read
+-- earlier): the platform fee ($pf = (plateform_fee/100) * $amount) is
+-- computed against $amount, which already includes donations by the time
+-- it reaches that line. register_guest_for_event here computed the
+-- platform fee against v_subtotal alone, undercounting it whenever a
+-- registration included a donation. User confirmed (2026-09-09): fix the
+-- base to (subtotal + donations), keep the server-side is_show_app_fee
+-- gate rather than adding a client-supplied allow-fee flag.
 
 create or replace function public.register_guest_for_event(
   p_event_id uuid,
