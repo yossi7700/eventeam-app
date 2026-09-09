@@ -2,23 +2,51 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, Heart, Plus, Users } from "lucide-react";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
 import { eventsCache, listEvents, setEventStatus } from "@/lib/queries/events";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const statusStyles: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  active: "bg-green-100 text-green-800",
-  ended: "bg-gray-100 text-gray-700",
-  cancelled: "bg-red-100 text-red-800",
+const statusVariants: Record<string, "outline" | "default" | "secondary" | "destructive"> = {
+  draft: "outline",
+  active: "default",
+  ended: "secondary",
+  cancelled: "destructive",
 };
 
 function EventsSkeleton() {
   return (
     <div className="space-y-3">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100" />
+        <Skeleton key={i} className="h-20 rounded-xl" />
       ))}
     </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <CalendarDays className="size-6" />
+        </span>
+        <div>
+          <p className="font-medium">No events yet</p>
+          <p className="text-sm text-muted-foreground">
+            Create your first event to start accepting registrations.
+          </p>
+        </div>
+        <Button render={<Link href="/events/new" />} size="sm" className="mt-1">
+          <Plus />
+          New event
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -53,70 +81,76 @@ export function EventsListClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Events</h1>
-        <Link
-          href="/events/new"
-          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white"
-        >
-          New Event
-        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Events</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your events, publish drafts, and track registrations.
+          </p>
+        </div>
+        <Button render={<Link href="/events/new" />}>
+          <Plus />
+          New event
+        </Button>
       </div>
 
       {isLoading && <EventsSkeleton />}
 
       {error && (
-        <p className="text-sm text-red-600">Failed to load events: {error.message}</p>
+        <Alert variant="destructive">
+          <AlertTitle>Couldn&apos;t load events</AlertTitle>
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
       )}
 
-      {!isLoading && events && events.length === 0 && (
-        <p className="text-sm text-gray-500">
-          No events yet. Create your first event to get started.
-        </p>
-      )}
+      {!isLoading && events && events.length === 0 && <EmptyState />}
 
       {events && events.length > 0 && (
-        <ul className="divide-y rounded-lg border">
+        <div className="grid gap-3">
           {events.map((event) => (
-            <li key={event.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-              <Link href={`/events/${event.id}/edit`} className="flex-1">
-                <p className="font-medium">{event.title}</p>
-                <p className="text-sm text-gray-500">
-                  {new Date(event.start_date).toLocaleDateString()} -{" "}
-                  {new Date(event.end_date).toLocaleDateString()}
-                </p>
-              </Link>
-              <div className="flex items-center gap-3">
-                <Link href={`/events/${event.id}/donations`} className="text-sm text-blue-600">
-                  Donations
+            <Card key={event.id} className="transition-shadow hover:shadow-md py-0">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <Link href={`/events/${event.id}/edit`} className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-medium">{event.title}</p>
+                    <Badge variant={statusVariants[event.status] ?? "outline"} className="capitalize">
+                      {event.status}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                    <CalendarDays className="size-3.5" />
+                    {new Date(event.start_date).toLocaleDateString()} –{" "}
+                    {new Date(event.end_date).toLocaleDateString()}
+                  </p>
                 </Link>
-                <Link href={`/events/${event.id}/leads`} className="text-sm text-blue-600">
-                  Leads
-                </Link>
-                {(event.status === "draft" || event.status === "active") && (
-                  <button
-                    onClick={() =>
-                      toggleStatusMutation.mutate({
-                        eventId: event.id,
-                        status: event.status === "active" ? "draft" : "active",
-                      })
-                    }
-                    disabled={toggleStatusMutation.isPending}
-                    className="rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50"
-                  >
-                    {event.status === "active" ? "Unpublish" : "Publish"}
-                  </button>
-                )}
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-                    statusStyles[event.status] ?? "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {event.status}
-                </span>
-              </div>
-            </li>
+                <div className="flex items-center gap-2">
+                  <Button render={<Link href={`/events/${event.id}/donations`} />} variant="ghost" size="sm">
+                    <Heart className="size-3.5" />
+                    Donations
+                  </Button>
+                  <Button render={<Link href={`/events/${event.id}/leads`} />} variant="ghost" size="sm">
+                    <Users className="size-3.5" />
+                    Leads
+                  </Button>
+                  {(event.status === "draft" || event.status === "active") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        toggleStatusMutation.mutate({
+                          eventId: event.id,
+                          status: event.status === "active" ? "draft" : "active",
+                        })
+                      }
+                      disabled={toggleStatusMutation.isPending}
+                    >
+                      {event.status === "active" ? "Unpublish" : "Publish"}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
