@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Heart, Plus, Trash2 } from "lucide-react";
 import {
   addTemplateToEvent,
   createDonationField,
@@ -14,6 +15,13 @@ import {
   updateDonationField,
 } from "@/lib/queries/donations";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function DonationsClient({ eventId }: { eventId: string }) {
   const queryClient = useQueryClient();
@@ -83,110 +91,124 @@ export function DonationsClient({ eventId }: { eventId: string }) {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Donation Fields</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Donation Fields</h1>
 
-      {isPending && <div className="h-24 animate-pulse rounded-lg bg-gray-100" />}
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {isPending && <Skeleton className="h-24 w-full rounded-xl" />}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
 
       {fields && fields.length > 0 && (
-        <ul className="divide-y rounded-lg border">
+        <div className="grid gap-2">
           {fields.map((f) => (
-            <li key={f.id} className="flex items-center justify-between px-4 py-3">
-              <div>
-                <p className="font-medium">{f.title}</p>
-                <p className="text-sm text-gray-500">
-                  {f.suggested_amount ? `Suggested: $${f.suggested_amount}` : "No suggested amount"}
-                  {f.allow_custom_amount ? " · custom amount allowed" : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() =>
-                    toggleActiveMutation.mutate({ id: f.id, is_active: !f.is_active })
-                  }
-                  className="rounded-md border px-3 py-1.5 text-xs font-medium"
-                >
-                  {f.is_active ? "Deactivate" : "Activate"}
-                </button>
-                <button
-                  onClick={() => deleteMutation.mutate(f.id)}
-                  className="rounded-md border border-red-600 px-3 py-1.5 text-xs font-medium text-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
+            <Card key={f.id} className="py-0">
+              <CardContent className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Heart className="size-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">{f.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {f.suggested_amount ? `Suggested: $${f.suggested_amount}` : "No suggested amount"}
+                      {f.allow_custom_amount ? " · custom amount allowed" : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleActiveMutation.mutate({ id: f.id, is_active: !f.is_active })}
+                  >
+                    {f.is_active ? "Deactivate" : "Activate"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(f.id)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
 
       {templates && templates.length > 0 && (
-        <div className="space-y-2 rounded-lg border p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium">Add from your donation catalog</h2>
-            <Link href="/settings/company" className="text-xs text-gray-500 hover:text-black">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm">Add from your donation catalog</CardTitle>
+            <Link href="/settings/company" className="text-xs text-muted-foreground hover:text-foreground">
               Manage catalog
             </Link>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {templates
-              .filter((t) => !fields?.some((f) => f.template_id === t.id))
-              .map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => addFromTemplateMutation.mutate(t.id)}
-                  disabled={addFromTemplateMutation.isPending}
-                  className="rounded-full border px-3 py-1 text-xs font-medium disabled:opacity-50"
-                >
-                  + {t.title}
-                </button>
-              ))}
-          </div>
-          {addFromTemplateMutation.error && (
-            <p className="text-xs text-red-600">
-              {(addFromTemplateMutation.error as Error).message}
-            </p>
-          )}
-        </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {templates
+                .filter((t) => !fields?.some((f) => f.template_id === t.id))
+                .map((t) => (
+                  <Button
+                    key={t.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => addFromTemplateMutation.mutate(t.id)}
+                    disabled={addFromTemplateMutation.isPending}
+                  >
+                    <Plus className="size-3" />
+                    {t.title}
+                  </Button>
+                ))}
+            </div>
+            {addFromTemplateMutation.error && (
+              <p className="text-xs text-destructive">
+                {(addFromTemplateMutation.error as Error).message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      <form onSubmit={handleAdd} className="space-y-3 rounded-lg border p-4">
-        <h2 className="text-sm font-medium">Add a one-off donation field</h2>
-        <input
-          required
-          placeholder="Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-        />
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            placeholder="Suggested amount (optional)"
-            value={suggestedAmount}
-            onChange={(e) => setSuggestedAmount(e.target.value)}
-            className="flex-1 rounded-md border px-3 py-2 text-sm"
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={allowCustom}
-              onChange={(e) => setAllowCustom(e.target.checked)}
-            />
-            Allow custom amount
-          </label>
-        </div>
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Add
-        </button>
-      </form>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Add a one-off donation field</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleAdd} className="space-y-3">
+            <Input required placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Suggested amount (optional)"
+                value={suggestedAmount}
+                onChange={(e) => setSuggestedAmount(e.target.value)}
+                className="flex-1"
+              />
+              <Label htmlFor="donation-custom" className="flex items-center gap-2 whitespace-nowrap text-sm font-normal">
+                <Checkbox
+                  id="donation-custom"
+                  checked={allowCustom}
+                  onCheckedChange={(checked) => setAllowCustom(checked === true)}
+                />
+                Allow custom amount
+              </Label>
+            </div>
+            <Button type="submit" disabled={createMutation.isPending}>
+              <Plus />
+              Add
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
