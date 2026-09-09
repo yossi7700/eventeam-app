@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { getMyProfile, profileCache, updateMyProfile } from "@/lib/queries/profile";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProfileSettingsClient() {
   const queryClient = useQueryClient();
@@ -23,46 +29,45 @@ export function ProfileSettingsClient() {
 
   const mutation = useMutation({
     mutationFn: () => updateMyProfile({ full_name: fullName, phone: phone || null }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: profileCache.meKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: profileCache.meKey });
+      toast.success("Profile saved.");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   if (isPending) {
-    return <div className="h-32 max-w-xl animate-pulse rounded-lg bg-gray-100" />;
+    return <Skeleton className="h-56 max-w-xl rounded-xl" />;
   }
 
   return (
-    <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">Profile</h1>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          mutation.mutate();
-        }}
-        className="space-y-3 rounded-lg border p-4"
-      >
-        <input
-          placeholder="Full name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          placeholder="Phone"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-        />
-        {mutation.error && (
-          <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
-        )}
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {mutation.isPending ? "Saving..." : "Save profile"}
-        </button>
-      </form>
+    <div className="max-w-xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Your profile</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              mutation.mutate();
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-name">Full name</Label>
+              <Input id="profile-name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-phone">Phone</Label>
+              <Input id="profile-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Saving..." : "Save profile"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Plus, Trash2 } from "lucide-react";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
 import {
   companySettingsCache,
@@ -17,6 +19,21 @@ import {
   listDonationTemplates,
   updateDonationTemplate,
 } from "@/lib/queries/donations";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function ProfileForm({ companyId }: { companyId: string }) {
   const queryClient = useQueryClient();
@@ -50,108 +67,99 @@ function ProfileForm({ companyId }: { companyId: string }) {
         country: country || null,
         google_maps_url: googleMapsUrl || null,
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: companySettingsCache.companyKey(companyId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: companySettingsCache.companyKey(companyId) });
+      toast.success("Company profile saved.");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  if (isPending) return <div className="h-32 animate-pulse rounded-lg bg-gray-100" />;
+  if (isPending) return <Skeleton className="h-96 w-full rounded-xl" />;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        mutation.mutate();
-      }}
-      className="space-y-3 rounded-lg border p-4"
-    >
-      <h2 className="text-sm font-medium">Company profile</h2>
-      <input
-        required
-        placeholder="Company name"
-        defaultValue={company?.name ?? ""}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
-      />
-      <input
-        required
-        type="email"
-        placeholder="Contact email"
-        defaultValue={company?.contact_email ?? ""}
-        onChange={(e) => setContactEmail(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
-      />
-      <input
-        placeholder="Contact phone"
-        defaultValue={company?.contact_phone ?? ""}
-        onChange={(e) => setContactPhone(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
-      />
-
-      <div className="border-t pt-3">
-        <p className="mb-2 text-xs font-medium text-gray-500">
-          Event address (shown on the public event page when &quot;Ask for guest address&quot; /
-          address display is enabled)
-        </p>
-        <div className="space-y-2">
-          <input
-            placeholder="Address line 1"
-            defaultValue={company?.address_line1 ?? ""}
-            onChange={(e) => setAddressLine1(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-          <input
-            placeholder="Address line 2 (optional)"
-            defaultValue={company?.address_line2 ?? ""}
-            onChange={(e) => setAddressLine2(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              placeholder="City"
-              defaultValue={company?.city ?? ""}
-              onChange={(e) => setCity(e.target.value)}
-              className="rounded-md border px-3 py-2 text-sm"
-            />
-            <input
-              placeholder="State / region"
-              defaultValue={company?.region ?? ""}
-              onChange={(e) => setRegion(e.target.value)}
-              className="rounded-md border px-3 py-2 text-sm"
-            />
-            <input
-              placeholder="Postal / zip code"
-              defaultValue={company?.postal_code ?? ""}
-              onChange={(e) => setPostalCode(e.target.value)}
-              className="rounded-md border px-3 py-2 text-sm"
-            />
-            <input
-              placeholder="Country"
-              defaultValue={company?.country ?? ""}
-              onChange={(e) => setCountry(e.target.value)}
-              className="rounded-md border px-3 py-2 text-sm"
-            />
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Company profile</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="cf-name">Company name</Label>
+            <Input id="cf-name" required defaultValue={company?.name ?? ""} onChange={(e) => setName(e.target.value)} />
           </div>
-          <input
-            type="url"
-            placeholder="Google Maps link (optional)"
-            defaultValue={company?.google_maps_url ?? ""}
-            onChange={(e) => setGoogleMapsUrl(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </div>
-      </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-email">Contact email</Label>
+              <Input
+                id="cf-email"
+                required
+                type="email"
+                defaultValue={company?.contact_email ?? ""}
+                onChange={(e) => setContactEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-phone">Contact phone</Label>
+              <Input id="cf-phone" defaultValue={company?.contact_phone ?? ""} onChange={(e) => setContactPhone(e.target.value)} />
+            </div>
+          </div>
 
-      {mutation.error && (
-        <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
-      )}
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {mutation.isPending ? "Saving..." : "Save profile"}
-      </button>
-    </form>
+          <div className="space-y-3 border-t pt-4">
+            <div>
+              <p className="text-sm font-medium">Event address</p>
+              <p className="text-xs text-muted-foreground">
+                Shown on the public event page when &quot;Ask for guest address&quot; is enabled
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-addr1">Address line 1</Label>
+              <Input id="cf-addr1" defaultValue={company?.address_line1 ?? ""} onChange={(e) => setAddressLine1(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-addr2">Address line 2 (optional)</Label>
+              <Input id="cf-addr2" defaultValue={company?.address_line2 ?? ""} onChange={(e) => setAddressLine2(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cf-city">City</Label>
+                <Input id="cf-city" defaultValue={company?.city ?? ""} onChange={(e) => setCity(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cf-region">State / region</Label>
+                <Input id="cf-region" defaultValue={company?.region ?? ""} onChange={(e) => setRegion(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cf-postal">Postal / zip code</Label>
+                <Input id="cf-postal" defaultValue={company?.postal_code ?? ""} onChange={(e) => setPostalCode(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cf-country">Country</Label>
+                <Input id="cf-country" defaultValue={company?.country ?? ""} onChange={(e) => setCountry(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-maps">Google Maps link (optional)</Label>
+              <Input
+                id="cf-maps"
+                type="url"
+                defaultValue={company?.google_maps_url ?? ""}
+                onChange={(e) => setGoogleMapsUrl(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving..." : "Save profile"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -199,129 +207,130 @@ function FrontPageDesignForm({ companyId }: { companyId: string }) {
         step_4_title: stepTitles[3] || null,
         step_5_title: stepTitles[4] || null,
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: companySettingsCache.key(companyId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: companySettingsCache.key(companyId) });
+      toast.success("Design saved.");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  if (isPending) return <div className="h-64 animate-pulse rounded-lg bg-gray-100" />;
+  if (isPending) return <Skeleton className="h-96 w-full rounded-xl" />;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        mutation.mutate();
-      }}
-      className="space-y-3 rounded-lg border p-4"
-    >
-      <h2 className="text-sm font-medium">Public page design</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Public page design</CardTitle>
+        <CardDescription>How your company&apos;s public page looks to guests.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-primary">Primary color</Label>
+              <input
+                id="fp-primary"
+                type="color"
+                defaultValue={settings?.primary_color ?? "#000000"}
+                onChange={(e) => setPrimaryColor(e.target.value)}
+                className="h-9 w-full cursor-pointer rounded-md border"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-secondary">Secondary color</Label>
+              <input
+                id="fp-secondary"
+                type="color"
+                defaultValue={settings?.secondary_color ?? "#ffffff"}
+                onChange={(e) => setSecondaryColor(e.target.value)}
+                className="h-9 w-full cursor-pointer rounded-md border"
+              />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="text-xs text-gray-500">
-          Primary color
-          <input
-            type="color"
-            defaultValue={settings?.primary_color ?? "#000000"}
-            onChange={(e) => setPrimaryColor(e.target.value)}
-            className="mt-1 h-10 w-full rounded-md border"
-          />
-        </label>
-        <label className="text-xs text-gray-500">
-          Secondary color
-          <input
-            type="color"
-            defaultValue={settings?.secondary_color ?? "#ffffff"}
-            onChange={(e) => setSecondaryColor(e.target.value)}
-            className="mt-1 h-10 w-full rounded-md border"
-          />
-        </label>
-      </div>
-
-      <input
-        placeholder="Font family (e.g. Inter, sans-serif)"
-        defaultValue={settings?.font_family ?? ""}
-        onChange={(e) => setFontFamily(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
-      />
-
-      <textarea
-        rows={3}
-        placeholder="About text (shown on your public page)"
-        defaultValue={settings?.about_text ?? ""}
-        onChange={(e) => setAboutText(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
-      />
-
-      <div className="grid grid-cols-2 gap-3">
-        <input
-          placeholder="Facebook URL"
-          defaultValue={settings?.facebook_url ?? ""}
-          onChange={(e) => setFacebookUrl(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          placeholder="Instagram URL"
-          defaultValue={settings?.instagram_url ?? ""}
-          onChange={(e) => setInstagramUrl(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          placeholder="Twitter / X URL"
-          defaultValue={settings?.twitter_url ?? ""}
-          onChange={(e) => setTwitterUrl(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          placeholder="YouTube URL"
-          defaultValue={settings?.youtube_url ?? ""}
-          onChange={(e) => setYoutubeUrl(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          placeholder="Website URL"
-          defaultValue={settings?.website_url ?? ""}
-          onChange={(e) => setWebsiteUrl(e.target.value)}
-          className="col-span-2 rounded-md border px-3 py-2 text-sm"
-        />
-      </div>
-
-      <div>
-        <span className="text-xs font-medium text-gray-500">
-          Registration flow step titles
-        </span>
-        <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-5">
-          {stepTitles.map((title, i) => (
-            <input
-              key={i}
-              placeholder={`Step ${i + 1}`}
-              value={title}
-              onChange={(e) =>
-                setStepTitles((prev) => prev.map((t, j) => (j === i ? e.target.value : t)))
-              }
-              className="rounded-md border px-2 py-1.5 text-sm"
+          <div className="space-y-1.5">
+            <Label htmlFor="fp-font">Font family</Label>
+            <Input
+              id="fp-font"
+              placeholder="e.g. Inter, sans-serif"
+              defaultValue={settings?.font_family ?? ""}
+              onChange={(e) => setFontFamily(e.target.value)}
             />
-          ))}
-        </div>
-      </div>
+          </div>
 
-      <textarea
-        rows={4}
-        placeholder="Custom CSS (advanced, applied to your public page)"
-        defaultValue={settings?.custom_css ?? ""}
-        onChange={(e) => setCustomCss(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 font-mono text-xs"
-      />
+          <div className="space-y-1.5">
+            <Label htmlFor="fp-about">About text</Label>
+            <Textarea
+              id="fp-about"
+              rows={3}
+              placeholder="Shown on your public page"
+              defaultValue={settings?.about_text ?? ""}
+              onChange={(e) => setAboutText(e.target.value)}
+            />
+          </div>
 
-      {mutation.error && (
-        <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
-      )}
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {mutation.isPending ? "Saving..." : "Save design"}
-      </button>
-    </form>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-fb">Facebook URL</Label>
+              <Input id="fp-fb" defaultValue={settings?.facebook_url ?? ""} onChange={(e) => setFacebookUrl(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-ig">Instagram URL</Label>
+              <Input id="fp-ig" defaultValue={settings?.instagram_url ?? ""} onChange={(e) => setInstagramUrl(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-tw">Twitter / X URL</Label>
+              <Input id="fp-tw" defaultValue={settings?.twitter_url ?? ""} onChange={(e) => setTwitterUrl(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fp-yt">YouTube URL</Label>
+              <Input id="fp-yt" defaultValue={settings?.youtube_url ?? ""} onChange={(e) => setYoutubeUrl(e.target.value)} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label htmlFor="fp-web">Website URL</Label>
+              <Input id="fp-web" defaultValue={settings?.website_url ?? ""} onChange={(e) => setWebsiteUrl(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Registration flow step titles</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+              {stepTitles.map((title, i) => (
+                <Input
+                  key={i}
+                  placeholder={`Step ${i + 1}`}
+                  value={title}
+                  onChange={(e) =>
+                    setStepTitles((prev) => prev.map((t, j) => (j === i ? e.target.value : t)))
+                  }
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="fp-css">Custom CSS (advanced)</Label>
+            <Textarea
+              id="fp-css"
+              rows={4}
+              placeholder="Applied to your public page"
+              defaultValue={settings?.custom_css ?? ""}
+              onChange={(e) => setCustomCss(e.target.value)}
+              className="font-mono text-xs"
+            />
+          </div>
+
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving..." : "Save design"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -412,147 +421,152 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
         patch as Parameters<typeof updateCompanySettings>[1]
       );
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: companySettingsCache.key(companyId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: companySettingsCache.key(companyId) });
+      toast.success("Event defaults saved.");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  if (isPending) return <div className="h-64 animate-pulse rounded-lg bg-gray-100" />;
+  if (isPending) return <Skeleton className="h-96 w-full rounded-xl" />;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        mutation.mutate();
-      }}
-      className="space-y-3 rounded-lg border p-4"
-    >
-      <div>
-        <h2 className="text-sm font-medium">Event defaults</h2>
-        <p className="text-xs text-gray-500">
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Event defaults</CardTitle>
+        <CardDescription>
           These apply to every new event unless overridden on that event&apos;s own Advance
           settings. Leave &quot;Platform default&quot; to use the platform-wide setting.
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        {DEFAULT_FIELDS.map(({ key, label }) => (
-          <div key={key} className="flex items-center justify-between gap-4">
-            <span className="text-sm">{label}</span>
-            <select
-              value={defaults[key] ?? "inherit"}
-              onChange={(e) =>
-                setDefaults((prev) => ({ ...prev, [key]: e.target.value as TriState }))
-              }
-              className="rounded-md border px-2 py-1 text-sm"
-            >
-              <option value="inherit">Platform default</option>
-              <option value="on">Yes</option>
-              <option value="off">No</option>
-            </select>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-1">
+            {DEFAULT_FIELDS.map(({ key, label }, i) => (
+              <div key={key}>
+                <div className="flex items-center justify-between gap-4 py-2">
+                  <span className="text-sm">{label}</span>
+                  <Select
+                    value={defaults[key] ?? "inherit"}
+                    onValueChange={(value) =>
+                      setDefaults((prev) => ({ ...prev, [key]: value as TriState }))
+                    }
+                  >
+                    <SelectTrigger size="sm" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inherit">Platform default</SelectItem>
+                      <SelectItem value="on">Yes</SelectItem>
+                      <SelectItem value="off">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {i < DEFAULT_FIELDS.length - 1 && <div className="border-b" />}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 border-t pt-3">
-        <label className="text-xs text-gray-500">
-          Platform fee %
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step="0.01"
-            placeholder="Use platform default"
-            value={platformFeePct}
-            onChange={(e) => setPlatformFeePct(e.target.value)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="text-xs text-gray-500">
-          Platform fee text shown to guests
-          <input
-            placeholder="e.g. Includes a 3% service fee"
-            value={platformFeeText}
-            onChange={(e) => setPlatformFeeText(e.target.value)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </label>
-      </div>
+          <div className="grid grid-cols-2 gap-3 border-t pt-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="ed-fee-pct">Platform fee %</Label>
+              <Input
+                id="ed-fee-pct"
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                placeholder="Use platform default"
+                value={platformFeePct}
+                onChange={(e) => setPlatformFeePct(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ed-fee-text">Platform fee text shown to guests</Label>
+              <Input
+                id="ed-fee-text"
+                placeholder="e.g. Includes a 3% service fee"
+                value={platformFeeText}
+                onChange={(e) => setPlatformFeeText(e.target.value)}
+              />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 gap-3 border-t pt-3">
-        <label className="text-xs text-gray-500">
-          Candle-lighting minutes before sunset
-          <input
-            type="number"
-            min={18}
-            placeholder="Hebcal default (18)"
-            value={beforeSunsetMinutes}
-            onChange={(e) => setBeforeSunsetMinutes(e.target.value)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          />
-          <span className="mt-0.5 block text-[11px] text-gray-400">
-            Minimum 18 minutes (standard candle-lighting floor).
-          </span>
-        </label>
-        <label className="text-xs text-gray-500">
-          Minutes after sunset (for second-event timing)
-          <input
-            type="number"
-            placeholder="Optional"
-            value={afterSunsetMinutes}
-            onChange={(e) => setAfterSunsetMinutes(e.target.value)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </label>
-      </div>
+          <div className="grid grid-cols-2 gap-3 border-t pt-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="ed-before">Candle-lighting minutes before sunset</Label>
+              <Input
+                id="ed-before"
+                type="number"
+                min={18}
+                placeholder="Hebcal default (18)"
+                value={beforeSunsetMinutes}
+                onChange={(e) => setBeforeSunsetMinutes(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Minimum 18 minutes (standard candle-lighting floor).
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ed-after">Minutes after sunset (for second-event timing)</Label>
+              <Input
+                id="ed-after"
+                type="number"
+                placeholder="Optional"
+                value={afterSunsetMinutes}
+                onChange={(e) => setAfterSunsetMinutes(e.target.value)}
+              />
+            </div>
+          </div>
 
-      <div className="space-y-2 border-t pt-3">
-        <p className="text-xs font-medium text-gray-500">
-          Text shown on the public booking page alongside the toggles above
-        </p>
-        <label className="block text-xs text-gray-500">
-          Terms &amp; regulations text (shown when &quot;Show terms &amp; regulations&quot; is
-          on)
-          <textarea
-            rows={2}
-            placeholder="I agree to the terms and conditions for this event."
-            value={regulationText}
-            onChange={(e) => setRegulationText(e.target.value)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-xs text-gray-500">
-          Donation field text (shown when donations are enabled)
-          <textarea
-            rows={2}
-            placeholder="Your donation helps support this event."
-            value={donationFieldText}
-            onChange={(e) => setDonationFieldText(e.target.value)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-xs text-gray-500">
-          Cash payment instructions (shown when cash is selected)
-          <textarea
-            rows={2}
-            placeholder="Please bring exact cash to the event."
-            value={codText}
-            onChange={(e) => setCodText(e.target.value)}
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </label>
-      </div>
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-xs font-medium text-muted-foreground">
+              Text shown on the public booking page alongside the toggles above
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="ed-reg-text">Terms &amp; regulations text</Label>
+              <Textarea
+                id="ed-reg-text"
+                rows={2}
+                placeholder="I agree to the terms and conditions for this event."
+                value={regulationText}
+                onChange={(e) => setRegulationText(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ed-don-text">Donation field text</Label>
+              <Textarea
+                id="ed-don-text"
+                rows={2}
+                placeholder="Your donation helps support this event."
+                value={donationFieldText}
+                onChange={(e) => setDonationFieldText(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ed-cod-text">Cash payment instructions</Label>
+              <Textarea
+                id="ed-cod-text"
+                rows={2}
+                placeholder="Please bring exact cash to the event."
+                value={codText}
+                onChange={(e) => setCodText(e.target.value)}
+              />
+            </div>
+          </div>
 
-      {mutation.error && (
-        <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
-      )}
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {mutation.isPending ? "Saving..." : "Save event defaults"}
-      </button>
-    </form>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving..." : "Save event defaults"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -602,85 +616,86 @@ function DonationCatalogForm({ companyId }: { companyId: string }) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border p-4">
-      <div>
-        <h2 className="text-sm font-medium">Donation catalog</h2>
-        <p className="text-xs text-gray-500">
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Donation catalog</CardTitle>
+        <CardDescription>
           Define donation fields once here, then add them to any event from the event&apos;s
           Donations page — no need to re-type them each time.
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isPending && <Skeleton className="h-16 w-full rounded-lg" />}
 
-      {isPending && <div className="h-16 animate-pulse rounded-lg bg-gray-100" />}
-
-      {templates && templates.length > 0 && (
-        <ul className="divide-y rounded-lg border">
-          {templates.map((t) => (
-            <li key={t.id} className="flex items-center justify-between px-3 py-2">
-              <div>
-                <p className="text-sm font-medium">{t.title}</p>
-                <p className="text-xs text-gray-500">
-                  {t.suggested_amount ? `Suggested: $${t.suggested_amount}` : "No suggested amount"}
-                </p>
+        {templates && templates.length > 0 && (
+          <div className="grid gap-2">
+            {templates.map((t) => (
+              <div key={t.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">{t.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t.suggested_amount ? `Suggested: $${t.suggested_amount}` : "No suggested amount"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleActiveMutation.mutate({ id: t.id, is_active: !t.is_active })}
+                  >
+                    {t.is_active ? "Deactivate" : "Activate"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(t.id)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => toggleActiveMutation.mutate({ id: t.id, is_active: !t.is_active })}
-                  className="rounded-md border px-2 py-1 text-xs font-medium"
-                >
-                  {t.is_active ? "Deactivate" : "Activate"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteMutation.mutate(t.id)}
-                  className="rounded-md border border-red-600 px-2 py-1 text-xs font-medium text-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </div>
+        )}
 
-      <form onSubmit={handleAdd} className="flex items-end gap-2">
-        <input
-          required
-          placeholder="Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="flex-1 rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          placeholder="Suggested $"
-          value={suggestedAmount}
-          onChange={(e) => setSuggestedAmount(e.target.value)}
-          className="w-28 rounded-md border px-3 py-2 text-sm"
-        />
-        <label className="flex items-center gap-1 whitespace-nowrap text-xs text-gray-500">
-          <input
-            type="checkbox"
-            checked={allowCustom}
-            onChange={(e) => setAllowCustom(e.target.checked)}
+        <form onSubmit={handleAdd} className="flex items-end gap-2">
+          <Input
+            required
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="flex-1"
           />
-          Custom amount
-        </label>
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Add
-        </button>
-      </form>
-      {createMutation.error && (
-        <p className="text-xs text-red-600">{(createMutation.error as Error).message}</p>
-      )}
-    </div>
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            placeholder="Suggested $"
+            value={suggestedAmount}
+            onChange={(e) => setSuggestedAmount(e.target.value)}
+            className="w-28"
+          />
+          <Label htmlFor="dc-custom" className="flex items-center gap-1.5 whitespace-nowrap text-xs font-normal text-muted-foreground">
+            <Checkbox
+              id="dc-custom"
+              checked={allowCustom}
+              onCheckedChange={(checked) => setAllowCustom(checked === true)}
+            />
+            Custom amount
+          </Label>
+          <Button type="submit" disabled={createMutation.isPending}>
+            <Plus />
+            Add
+          </Button>
+        </form>
+        {createMutation.error && (
+          <p className="text-xs text-destructive">{(createMutation.error as Error).message}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -693,16 +708,31 @@ export function CompanySettingsClient() {
   const companyId = profile?.companies?.id ?? null;
 
   if (!companyId) {
-    return <div className="h-32 animate-pulse rounded-lg bg-gray-100" />;
+    return <Skeleton className="h-96 max-w-2xl rounded-xl" />;
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Company Settings</h1>
-      <ProfileForm companyId={companyId} />
-      <EventDefaultsForm companyId={companyId} />
-      <DonationCatalogForm companyId={companyId} />
-      <FrontPageDesignForm companyId={companyId} />
+    <div className="max-w-2xl">
+      <Tabs defaultValue="profile">
+        <TabsList className="mb-4">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="defaults">Event defaults</TabsTrigger>
+          <TabsTrigger value="donations">Donations</TabsTrigger>
+          <TabsTrigger value="design">Design</TabsTrigger>
+        </TabsList>
+        <TabsContent value="profile">
+          <ProfileForm companyId={companyId} />
+        </TabsContent>
+        <TabsContent value="defaults">
+          <EventDefaultsForm companyId={companyId} />
+        </TabsContent>
+        <TabsContent value="donations">
+          <DonationCatalogForm companyId={companyId} />
+        </TabsContent>
+        <TabsContent value="design">
+          <FrontPageDesignForm companyId={companyId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
