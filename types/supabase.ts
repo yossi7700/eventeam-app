@@ -683,6 +683,13 @@ export type Database = {
             foreignKeyName: "guest_line_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "public_product_availability_view"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "guest_line_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "public_products_view"
             referencedColumns: ["id"]
           },
@@ -1328,6 +1335,14 @@ export type Database = {
           status: Database["public"]["Enums"]["event_status"] | null
           timezone: string | null
           title: string | null
+        }
+        Relationships: []
+      }
+      public_product_availability_view: {
+        Row: {
+          capacity: number | null
+          product_id: string | null
+          remaining: number | null
         }
         Relationships: []
       }

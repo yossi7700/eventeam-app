@@ -104,6 +104,14 @@ export function RegisterFormClient({
       return;
     }
 
+    const overCapacity = allProducts.find(
+      (p) => p.remaining != null && (quantities[p.id!] ?? 0) > p.remaining
+    );
+    if (overCapacity) {
+      alert(`Only ${overCapacity.remaining} left for "${overCapacity.name}".`);
+      return;
+    }
+
     if (attendeesRequired && !email && !phone) {
       alert("Please provide an email or phone number.");
       return;
@@ -163,25 +171,37 @@ export function RegisterFormClient({
 
       <div className="space-y-3">
         <h2 className="text-lg font-medium">Tickets</h2>
-        {allProducts.map((p) => (
-          <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="font-medium">{p.name}</p>
-              <p className="text-sm text-gray-500">
-                {p.sub_event_title} &middot; {p.price} {p.currency}
-              </p>
+        {allProducts.map((p) => {
+          const soldOut = p.remaining != null && p.remaining <= 0;
+          return (
+            <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="font-medium">{p.name}</p>
+                <p className="text-sm text-gray-500">
+                  {p.sub_event_title} &middot; {p.price} {p.currency}
+                </p>
+                {p.remaining != null && (
+                  <p className={`text-xs ${soldOut ? "text-red-600" : "text-gray-400"}`}>
+                    {soldOut ? "Sold out" : `${p.remaining} remaining`}
+                  </p>
+                )}
+              </div>
+              <input
+                type="number"
+                min={0}
+                max={p.remaining ?? undefined}
+                disabled={soldOut}
+                value={quantities[p.id!] ?? 0}
+                onChange={(e) => {
+                  const raw = Number(e.target.value);
+                  const capped = p.remaining != null ? Math.min(raw, p.remaining) : raw;
+                  setQuantities((q) => ({ ...q, [p.id!]: Math.max(0, capped) }));
+                }}
+                className="w-20 rounded-md border px-2 py-1 text-center disabled:bg-gray-100"
+              />
             </div>
-            <input
-              type="number"
-              min={0}
-              value={quantities[p.id!] ?? 0}
-              onChange={(e) =>
-                setQuantities((q) => ({ ...q, [p.id!]: Number(e.target.value) }))
-              }
-              className="w-20 rounded-md border px-2 py-1 text-center"
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {donationAllowed && event.donation_fields.length > 0 && (

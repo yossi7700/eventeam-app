@@ -7,6 +7,7 @@ export type PublicSubEvent = Tables<"public_sub_events_view">;
 export type PublicProduct = Tables<"public_products_view">;
 export type PublicDonationField = Tables<"public_donation_fields_view">;
 export type PublicSubEventActivity = Tables<"public_sub_event_activities_view">;
+export type PublicProductAvailability = Tables<"public_product_availability_view">;
 
 export type ResolvedAdvanceSettings = {
   is_attendees_required: boolean | null;
@@ -23,7 +24,7 @@ export type ResolvedAdvanceSettings = {
 
 export type PublicEventWithChildren = PublicEvent & {
   sub_events: (PublicSubEvent & {
-    products: PublicProduct[];
+    products: (PublicProduct & { remaining: number | null })[];
     activities: PublicSubEventActivity[];
   })[];
   donation_fields: PublicDonationField[];
@@ -107,9 +108,42 @@ export async function getPublicEventWithChildren(
   if (donationError) throw new Error(donationError.message);
   if (advanceError) throw new Error(advanceError.message);
 
+  // Gap-audit item: old HomeController::getBookingEventDetail returned
+  // remaining_seats per sub-event. Fetched as a second pass keyed by
+  // product id (the availability view has no event_id column of its own --
+  // it inherits visibility by joining through public_sub_events_view) so a
+  // sold-out product can show "0 remaining" instead of only failing at
+  // submit time.
+  const productIds = (subEvents ?? []).flatMap((se) =>
+    (se.products ?? [])
+      .map((p: PublicProduct) => p.id)
+      .filter((id): id is string => id != null)
+  );
+
+  let availabilityByProduct = new Map<string, number | null>();
+  if (productIds.length > 0) {
+    const { data: availability, error: availabilityError } = await supabase
+      .from("public_product_availability_view")
+      .select("*")
+      .in("product_id", productIds);
+
+    if (availabilityError) throw new Error(availabilityError.message);
+    availabilityByProduct = new Map(
+      (availability ?? []).map((row) => [row.product_id as string, row.remaining])
+    );
+  }
+
+  const subEventsWithAvailability = (subEvents ?? []).map((se) => ({
+    ...se,
+    products: (se.products ?? []).map((p: PublicProduct) => ({
+      ...p,
+      remaining: p.id ? (availabilityByProduct.get(p.id) ?? null) : null,
+    })),
+  }));
+
   return {
     ...event,
-    sub_events: (subEvents ?? []) as PublicEventWithChildren["sub_events"],
+    sub_events: subEventsWithAvailability as PublicEventWithChildren["sub_events"],
     donation_fields: donationFields ?? [],
     advance: (advanceRows?.[0] as ResolvedAdvanceSettings | undefined) ?? null,
   };
