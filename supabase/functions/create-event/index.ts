@@ -75,6 +75,21 @@ Deno.serve(async (req: Request) => {
     return errorResponse("company_id is required unless is_master_template is set", 422, corsHeaders);
   }
 
+  // Gap-audit item: old EventController::save validated
+  // start_date >= today (Laravel's after_or_equal:today). Applied only to
+  // creation, not update-event -- an already-started/ended event must
+  // stay editable (title/description fixes, etc.), and this view
+  // deliberately serves 'ended' events for recap pages. Master templates
+  // are exempt too: they're date-agnostic placeholders republished later
+  // with a fresh date via publish-template-event.
+  if (!isMasterTemplate) {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    if (new Date(body.start_date) < startOfToday) {
+      return errorResponse("start_date cannot be in the past", 422, corsHeaders);
+    }
+  }
+
   const supabase = createUserClient(req);
 
   const { data, error } = await supabase.rpc("create_event_with_children", {
