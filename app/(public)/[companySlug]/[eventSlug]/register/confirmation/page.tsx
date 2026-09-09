@@ -1,10 +1,13 @@
+import { Suspense } from "react";
+import { ConfirmationClient } from "./confirmation-client";
+
+// useSearchParams() (reading ?registration_id=...) requires a Suspense
+// boundary in this Next.js version -- same pattern as login/pending-approval
+// and settings/payment.
 export default function ConfirmationPage() {
   return (
-    <div className="mx-auto max-w-2xl space-y-4 py-16 text-center">
-      <h1 className="text-2xl font-semibold">You&apos;re registered!</h1>
-      <p className="text-gray-600">
-        A confirmation email is on its way. Thanks for registering.
-      </p>
-    </div>
+    <Suspense>
+      <ConfirmationClient />
+    </Suspense>
   );
 }

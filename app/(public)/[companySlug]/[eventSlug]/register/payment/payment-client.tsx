@@ -10,9 +10,11 @@ import { loadRegistrationDraft, clearRegistrationDraft } from "@/lib/registratio
 function CheckoutForm({
   companySlug,
   eventSlug,
+  registrationId,
 }: {
   companySlug: string;
   eventSlug: string;
+  registrationId: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -30,7 +32,7 @@ function CheckoutForm({
     const { error: confirmError } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/${companySlug}/${eventSlug}/register/confirmation`,
+        return_url: `${window.location.origin}/${companySlug}/${eventSlug}/register/confirmation?registration_id=${registrationId}`,
       },
     });
 
@@ -41,7 +43,7 @@ function CheckoutForm({
     }
 
     clearRegistrationDraft();
-    router.push(`/${companySlug}/${eventSlug}/register/confirmation`);
+    router.push(`/${companySlug}/${eventSlug}/register/confirmation?registration_id=${registrationId}`);
   }
 
   return (
@@ -68,6 +70,7 @@ export function PaymentClient({
 }) {
   const router = useRouter();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,9 +92,12 @@ export function PaymentClient({
       .then((response) => {
         if (!response.requires_payment || !response.client_secret) {
           clearRegistrationDraft();
-          router.replace(`/${companySlug}/${eventSlug}/register/confirmation`);
+          router.replace(
+            `/${companySlug}/${eventSlug}/register/confirmation?registration_id=${response.registration_id}`
+          );
           return;
         }
+        setRegistrationId(response.registration_id);
         setClientSecret(response.client_secret);
       })
       .catch((err: Error) => setError(err.message));
@@ -108,7 +114,7 @@ export function PaymentClient({
     );
   }
 
-  if (!clientSecret) {
+  if (!clientSecret || !registrationId) {
     return <div className="mx-auto h-64 max-w-2xl animate-pulse rounded-lg bg-gray-100" />;
   }
 
@@ -116,7 +122,7 @@ export function PaymentClient({
     <div className="mx-auto max-w-2xl space-y-6 py-12">
       <h1 className="text-2xl font-semibold">Payment</h1>
       <Elements stripe={getStripe()} options={{ clientSecret }}>
-        <CheckoutForm companySlug={companySlug} eventSlug={eventSlug} />
+        <CheckoutForm companySlug={companySlug} eventSlug={eventSlug} registrationId={registrationId} />
       </Elements>
     </div>
   );
