@@ -1349,6 +1349,7 @@ export type Database = {
       public_products_view: {
         Row: {
           capacity: number | null
+          color: string | null
           currency: string | null
           description: string | null
           id: string | null

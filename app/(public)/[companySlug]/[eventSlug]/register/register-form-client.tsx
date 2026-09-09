@@ -175,16 +175,25 @@ export function RegisterFormClient({
           const soldOut = p.remaining != null && p.remaining <= 0;
           return (
             <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="font-medium">{p.name}</p>
-                <p className="text-sm text-gray-500">
-                  {p.sub_event_title} &middot; {p.price} {p.currency}
-                </p>
-                {p.remaining != null && (
-                  <p className={`text-xs ${soldOut ? "text-red-600" : "text-gray-400"}`}>
-                    {soldOut ? "Sold out" : `${p.remaining} remaining`}
-                  </p>
+              <div className="flex items-start gap-2">
+                {p.color && (
+                  <span
+                    aria-hidden
+                    className="mt-1 h-3 w-3 shrink-0 rounded-full border"
+                    style={{ backgroundColor: p.color }}
+                  />
                 )}
+                <div>
+                  <p className="font-medium">{p.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {p.sub_event_title} &middot; {p.price} {p.currency}
+                  </p>
+                  {p.remaining != null && (
+                    <p className={`text-xs ${soldOut ? "text-red-600" : "text-gray-400"}`}>
+                      {soldOut ? "Sold out" : `${p.remaining} remaining`}
+                    </p>
+                  )}
+                </div>
               </div>
               <input
                 type="number"
