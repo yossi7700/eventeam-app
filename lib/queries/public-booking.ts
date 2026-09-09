@@ -51,6 +51,13 @@ export async function getPublicCompanyProfile(
   return data;
 }
 
+// Gap-audit item: old HomeController::getEventByCompany filtered a
+// company's public event list to where('end_date', '>', now()) --
+// already-ended events never appeared under "Upcoming Events". This view
+// deliberately also serves 'ended' events (so a direct link to a past
+// event's page still resolves, e.g. for a recap), so the not-yet-ended
+// filter has to happen here rather than by narrowing the view's status
+// list.
 export async function listPublicEventsForCompany(
   companySlug: string
 ): Promise<PublicEvent[]> {
@@ -59,6 +66,7 @@ export async function listPublicEventsForCompany(
     .from("public_events_view")
     .select("*")
     .eq("company_slug", companySlug)
+    .gt("end_date", new Date().toISOString())
     .order("start_date", { ascending: true });
 
   if (error) throw new Error(error.message);
