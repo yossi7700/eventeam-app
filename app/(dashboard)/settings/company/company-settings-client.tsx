@@ -384,6 +384,17 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
 
   const mutation = useMutation({
     mutationFn: () => {
+      // Gap-audit item: old EventController::companyAutomaticConfigsSave
+      // rejected before_sunset_time < 18 (standard candle-lighting floor,
+      // also hebcal.com's own default) -- enforced at the DB level now
+      // (company_settings_before_sunset_minimum), checked here too for a
+      // clear message instead of a raw constraint-violation error.
+      if (beforeSunsetMinutes !== "" && Number(beforeSunsetMinutes) < 18) {
+        return Promise.reject(
+          new Error("Candle-lighting minutes before sunset must be at least 18.")
+        );
+      }
+
       const patch: Record<string, boolean | number | string | null> = {
         platform_fee_pct: platformFeePct === "" ? null : Number(platformFeePct),
         platform_fee_text: platformFeeText || null,
@@ -472,11 +483,15 @@ function EventDefaultsForm({ companyId }: { companyId: string }) {
           Candle-lighting minutes before sunset
           <input
             type="number"
+            min={18}
             placeholder="Hebcal default (18)"
             value={beforeSunsetMinutes}
             onChange={(e) => setBeforeSunsetMinutes(e.target.value)}
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
           />
+          <span className="mt-0.5 block text-[11px] text-gray-400">
+            Minimum 18 minutes (standard candle-lighting floor).
+          </span>
         </label>
         <label className="text-xs text-gray-500">
           Minutes after sunset (for second-event timing)
