@@ -32,6 +32,7 @@ function TemplateForm({
   const queryClient = useQueryClient();
   const [subject, setSubject] = useState(existing?.subject ?? "");
   const [bodyHtml, setBodyHtml] = useState(existing?.body_html ?? "");
+  const [ccEmails, setCcEmails] = useState((existing?.cc_emails ?? []).join(", "));
 
   const saveMutation = useMutation({
     mutationFn: upsertEmailTemplate,
@@ -41,7 +42,11 @@ function TemplateForm({
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    saveMutation.mutate({ company_id: companyId, kind, subject, body_html: bodyHtml });
+    const cc_emails = ccEmails
+      .split(",")
+      .map((email) => email.trim())
+      .filter(Boolean);
+    saveMutation.mutate({ company_id: companyId, kind, subject, body_html: bodyHtml, cc_emails });
   }
 
   return (
@@ -61,6 +66,15 @@ function TemplateForm({
         onChange={(e) => setBodyHtml(e.target.value)}
         className="w-full rounded-md border px-3 py-2 font-mono text-sm"
       />
+      <label className="block text-xs text-gray-500">
+        CC additional recipients (comma-separated) on every email of this type
+        <input
+          placeholder="manager@example.com, office@example.com"
+          value={ccEmails}
+          onChange={(e) => setCcEmails(e.target.value)}
+          className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+        />
+      </label>
       {saveMutation.error && (
         <p className="text-sm text-red-600">{(saveMutation.error as Error).message}</p>
       )}

@@ -8,6 +8,7 @@ export async function sendViaResend(params: {
   from: string;
   subject: string;
   html: string;
+  cc?: string[];
 }): Promise<{ id: string }> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) {
@@ -27,6 +28,7 @@ export async function sendViaResend(params: {
       to: params.to,
       subject: params.subject,
       html: params.html,
+      ...(params.cc && params.cc.length > 0 ? { cc: params.cc } : {}),
     }),
   });
 

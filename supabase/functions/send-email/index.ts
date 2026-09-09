@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
   if (body.company_id) {
     const { data } = await supabase
       .from("email_templates")
-      .select("subject, body_html")
+      .select("subject, body_html, cc_emails")
       .eq("company_id", body.company_id)
       .eq("kind", body.kind)
       .eq("is_active", true)
@@ -60,7 +60,7 @@ Deno.serve(async (req: Request) => {
   if (!template) {
     const { data } = await supabase
       .from("email_templates")
-      .select("subject, body_html")
+      .select("subject, body_html, cc_emails")
       .is("company_id", null)
       .eq("kind", body.kind)
       .eq("is_active", true)
@@ -85,6 +85,7 @@ Deno.serve(async (req: Request) => {
       from: Deno.env.get("EMAIL_FROM_ADDRESS") ?? "noreply@example.com",
       subject,
       html,
+      cc: template.cc_emails ?? undefined,
     });
     return jsonResponse({ sent: true, id: result.id });
   } catch (err) {

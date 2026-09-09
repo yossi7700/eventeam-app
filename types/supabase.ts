@@ -455,6 +455,7 @@ export type Database = {
       email_templates: {
         Row: {
           body_html: string
+          cc_emails: string[]
           company_id: string | null
           id: string
           is_active: boolean
@@ -464,6 +465,7 @@ export type Database = {
         }
         Insert: {
           body_html: string
+          cc_emails?: string[]
           company_id?: string | null
           id?: string
           is_active?: boolean
@@ -473,6 +475,7 @@ export type Database = {
         }
         Update: {
           body_html?: string
+          cc_emails?: string[]
           company_id?: string | null
           id?: string
           is_active?: boolean
