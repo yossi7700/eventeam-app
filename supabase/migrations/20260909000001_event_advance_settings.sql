@@ -6,6 +6,13 @@
 -- the same three-tier shape (event override -> company default ->
 -- hardcoded fallback) using plain nullable columns instead of an EAV table,
 -- since the flag set is small, fixed, and known at schema-design time.
+--
+-- NOTE: the platform_settings defaults declared below do NOT match the old
+-- system's real defaultFields() -- they were corrected in migration
+-- 20260909000011_fix_platform_advance_defaults.sql after a closer
+-- re-verification against app/Helpers/helper.php. That later migration is
+-- the source of truth for the actual default values; this file is kept
+-- as-is for migration history.
 
 -- ============================================================================
 -- Company-level defaults (platform_settings = hardcoded fallback tier,
