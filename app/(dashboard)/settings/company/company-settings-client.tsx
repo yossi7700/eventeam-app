@@ -28,6 +28,13 @@ function ProfileForm({ companyId }: { companyId: string }) {
   const [name, setName] = useState(company?.name ?? "");
   const [contactEmail, setContactEmail] = useState(company?.contact_email ?? "");
   const [contactPhone, setContactPhone] = useState(company?.contact_phone ?? "");
+  const [addressLine1, setAddressLine1] = useState(company?.address_line1 ?? "");
+  const [addressLine2, setAddressLine2] = useState(company?.address_line2 ?? "");
+  const [city, setCity] = useState(company?.city ?? "");
+  const [region, setRegion] = useState(company?.region ?? "");
+  const [postalCode, setPostalCode] = useState(company?.postal_code ?? "");
+  const [country, setCountry] = useState(company?.country ?? "");
+  const [googleMapsUrl, setGoogleMapsUrl] = useState(company?.google_maps_url ?? "");
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -35,6 +42,13 @@ function ProfileForm({ companyId }: { companyId: string }) {
         name,
         contact_email: contactEmail,
         contact_phone: contactPhone || null,
+        address_line1: addressLine1 || null,
+        address_line2: addressLine2 || null,
+        city: city || null,
+        region: region || null,
+        postal_code: postalCode || null,
+        country: country || null,
+        google_maps_url: googleMapsUrl || null,
       }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: companySettingsCache.companyKey(companyId) }),
@@ -72,6 +86,61 @@ function ProfileForm({ companyId }: { companyId: string }) {
         onChange={(e) => setContactPhone(e.target.value)}
         className="w-full rounded-md border px-3 py-2 text-sm"
       />
+
+      <div className="border-t pt-3">
+        <p className="mb-2 text-xs font-medium text-gray-500">
+          Event address (shown on the public event page when &quot;Ask for guest address&quot; /
+          address display is enabled)
+        </p>
+        <div className="space-y-2">
+          <input
+            placeholder="Address line 1"
+            defaultValue={company?.address_line1 ?? ""}
+            onChange={(e) => setAddressLine1(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
+          <input
+            placeholder="Address line 2 (optional)"
+            defaultValue={company?.address_line2 ?? ""}
+            onChange={(e) => setAddressLine2(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              placeholder="City"
+              defaultValue={company?.city ?? ""}
+              onChange={(e) => setCity(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm"
+            />
+            <input
+              placeholder="State / region"
+              defaultValue={company?.region ?? ""}
+              onChange={(e) => setRegion(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm"
+            />
+            <input
+              placeholder="Postal / zip code"
+              defaultValue={company?.postal_code ?? ""}
+              onChange={(e) => setPostalCode(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm"
+            />
+            <input
+              placeholder="Country"
+              defaultValue={company?.country ?? ""}
+              onChange={(e) => setCountry(e.target.value)}
+              className="rounded-md border px-3 py-2 text-sm"
+            />
+          </div>
+          <input
+            type="url"
+            placeholder="Google Maps link (optional)"
+            defaultValue={company?.google_maps_url ?? ""}
+            onChange={(e) => setGoogleMapsUrl(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+
       {mutation.error && (
         <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
       )}

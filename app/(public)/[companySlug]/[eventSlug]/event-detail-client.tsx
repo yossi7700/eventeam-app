@@ -2,9 +2,36 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { getPublicEventWithChildren, publicBookingCache } from "@/lib/queries/public-booking";
+import {
+  getPublicCompanyProfile,
+  getPublicEventWithChildren,
+  publicBookingCache,
+} from "@/lib/queries/public-booking";
 import { getSunsetTimes } from "@/lib/edge-functions";
 import { resolveActivityTime } from "@/lib/activity-time";
+
+// Gap-audit item: old HomeController::getBookingEventDetail returned
+// formatUSAddress(...) + googlemaplink alongside the event, gated on the
+// event's "show address" flag (is_show_address, already ported as an
+// EventAdvanceSettings override). Builds a single display string from the
+// company's structured address fields, matching the old
+// formatUSAddress() helper's line breaks.
+function formatAddress(company: {
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+  country: string | null;
+}): string | null {
+  const cityLine = [company.city, company.region, company.postal_code]
+    .filter(Boolean)
+    .join(", ");
+  const lines = [company.address_line1, company.address_line2, cityLine, company.country].filter(
+    (line): line is string => !!line
+  );
+  return lines.length > 0 ? lines.join(", ") : null;
+}
 
 export function EventDetailClient({
   companySlug,
@@ -16,6 +43,11 @@ export function EventDetailClient({
   const { data: event, isPending } = useQuery({
     queryKey: publicBookingCache.eventKey(companySlug, eventSlug),
     queryFn: () => getPublicEventWithChildren(companySlug, eventSlug),
+  });
+
+  const { data: company } = useQuery({
+    queryKey: publicBookingCache.companyKey(companySlug),
+    queryFn: () => getPublicCompanyProfile(companySlug),
   });
 
   const hasActivitiesNeedingSunset = (event?.sub_events ?? []).some((se) =>
@@ -49,6 +81,9 @@ export function EventDetailClient({
     );
   }
 
+  const showAddress = event.advance?.is_show_address ?? false;
+  const formattedAddress = company ? formatAddress(company) : null;
+
   return (
     <div className="mx-auto max-w-2xl space-y-8 py-12">
       <div>
@@ -57,6 +92,21 @@ export function EventDetailClient({
         <p className="mt-1 text-sm text-gray-500">
           {event.start_date && new Date(event.start_date).toLocaleString()}
         </p>
+        {showAddress && (formattedAddress || company?.google_maps_url) && (
+          <div className="mt-2 text-sm text-gray-500">
+            {formattedAddress && <p>{formattedAddress}</p>}
+            {company?.google_maps_url && (
+              <a
+                href={company.google_maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                Get directions
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">

@@ -57,7 +57,16 @@ export async function updateCompany(
   companyId: string,
   patch: Pick<
     TablesUpdate<"companies">,
-    "name" | "contact_email" | "contact_phone" | "address_line1" | "address_line2" | "city" | "region" | "postal_code" | "country"
+    | "name"
+    | "contact_email"
+    | "contact_phone"
+    | "address_line1"
+    | "address_line2"
+    | "city"
+    | "region"
+    | "postal_code"
+    | "country"
+    | "google_maps_url"
   >
 ): Promise<Company> {
   const supabase = createClient();

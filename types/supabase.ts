@@ -84,6 +84,7 @@ export type Database = {
           contact_phone: string | null
           country: string | null
           created_at: string
+          google_maps_url: string | null
           id: string
           logo_path: string | null
           name: string
@@ -105,6 +106,7 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string
+          google_maps_url?: string | null
           id?: string
           logo_path?: string | null
           name: string
@@ -126,6 +128,7 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string
+          google_maps_url?: string | null
           id?: string
           logo_path?: string | null
           name?: string
@@ -1268,17 +1271,24 @@ export type Database = {
       public_company_profile: {
         Row: {
           about_text: string | null
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
           cod_text: string | null
           company_id: string | null
+          country: string | null
           custom_css: string | null
           donation_field_text: string | null
           facebook_url: string | null
           font_family: string | null
+          google_maps_url: string | null
           hero_image_path: string | null
           instagram_url: string | null
           logo_path: string | null
           name: string | null
+          postal_code: string | null
           primary_color: string | null
+          region: string | null
           regulation_text: string | null
           secondary_color: string | null
           slug: string | null
