@@ -9,7 +9,6 @@ import {
   listEmailTemplates,
   upsertEmailTemplate,
   type EmailTemplate,
-  type EmailTemplateKind,
 } from "@/lib/queries/email-templates";
 
 const kindLabels: Record<(typeof EMAIL_TEMPLATE_KINDS)[number], string> = {
@@ -20,13 +19,26 @@ const kindLabels: Record<(typeof EMAIL_TEMPLATE_KINDS)[number], string> = {
   company_rejected: "Company Rejected",
 };
 
+// The exact variables each kind is actually sent with, taken from every
+// invokeEmailFunction call site (register-guest, stripe-webhook,
+// approve-company, request-otp's thank-you cron) -- not a guessed/aspirational
+// list. A variable not in this list for a given kind will render literally
+// as "{{whatever}}" rather than being replaced.
+const kindVariables: Record<(typeof EMAIL_TEMPLATE_KINDS)[number], string[]> = {
+  registration_confirmation: ["guest_name", "event_title", "total_amount", "currency"],
+  thank_you: ["guest_name", "event_title"],
+  company_signup: ["company_name"],
+  company_approved: ["company_name"],
+  company_rejected: ["company_name", "rejected_reason"],
+};
+
 function TemplateForm({
   companyId,
   kind,
   existing,
 }: {
   companyId: string;
-  kind: EmailTemplateKind;
+  kind: (typeof EMAIL_TEMPLATE_KINDS)[number];
   existing: EmailTemplate | undefined;
 }) {
   const queryClient = useQueryClient();
@@ -49,8 +61,18 @@ function TemplateForm({
     saveMutation.mutate({ company_id: companyId, kind, subject, body_html: bodyHtml, cc_emails });
   }
 
+  const variables = kindVariables[kind];
+
   return (
     <form onSubmit={handleSave} className="space-y-3">
+      <p className="text-xs text-gray-500">
+        Available variables for this email:{" "}
+        {variables.map((v) => (
+          <code key={v} className="mr-1 rounded bg-gray-100 px-1 py-0.5">
+            {`{{${v}}}`}
+          </code>
+        ))}
+      </p>
       <input
         required
         placeholder="Subject"
@@ -61,7 +83,7 @@ function TemplateForm({
       <textarea
         required
         rows={12}
-        placeholder="HTML body (supports variables like {{guest_name}}, {{event_title}})"
+        placeholder="HTML body"
         value={bodyHtml}
         onChange={(e) => setBodyHtml(e.target.value)}
         className="w-full rounded-md border px-3 py-2 font-mono text-sm"
@@ -102,7 +124,9 @@ export function EmailTemplatesClient() {
     enabled: !!companyId,
   });
 
-  const [activeKind, setActiveKind] = useState<EmailTemplateKind>("registration_confirmation");
+  const [activeKind, setActiveKind] = useState<(typeof EMAIL_TEMPLATE_KINDS)[number]>(
+    "registration_confirmation"
+  );
 
   return (
     <div className="max-w-3xl space-y-6">
