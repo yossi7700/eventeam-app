@@ -21,6 +21,7 @@ type SubEventInput = {
   end_at?: string | null;
   capacity?: number | null;
   is_sunset_relative?: boolean;
+  is_active?: boolean;
   sunset_offset_minutes?: number | null;
   sort_order?: number;
   products?: ProductInput[];

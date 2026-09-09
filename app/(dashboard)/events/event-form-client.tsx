@@ -93,6 +93,7 @@ type FormSubEvent = {
   location: string;
   start_at: string;
   capacity: string;
+  is_active: boolean;
   products: FormProduct[];
 };
 
@@ -111,7 +112,14 @@ function emptyProduct(): FormProduct {
 }
 
 function emptySubEvent(): FormSubEvent {
-  return { title: "", location: "", start_at: "", capacity: "", products: [emptyProduct()] };
+  return {
+    title: "",
+    location: "",
+    start_at: "",
+    capacity: "",
+    is_active: true,
+    products: [emptyProduct()],
+  };
 }
 
 function toDatetimeLocal(iso: string | null | undefined): string {
@@ -136,6 +144,7 @@ function fromExisting(event: EventWithChildren): FormState {
       location: se.location ?? "",
       start_at: toDatetimeLocal(se.start_at),
       capacity: se.capacity != null ? String(se.capacity) : "",
+      is_active: se.is_active,
       products: se.products.map((p) => ({
         id: p.id,
         name: p.name,
@@ -155,6 +164,7 @@ function toSubEventsPayload(subEvents: FormSubEvent[]): SubEventInput[] {
     location: se.location || null,
     start_at: new Date(se.start_at).toISOString(),
     capacity: se.capacity ? Number(se.capacity) : null,
+    is_active: se.is_active,
     sort_order: seIndex,
     products: se.products.map((p, pIndex) => ({
       id: p.id,
@@ -372,20 +382,30 @@ export function EventFormClient({
           <div key={seIndex} className="space-y-3 rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Sub-event {seIndex + 1}</span>
-              {form.sub_events.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((f) => ({
-                      ...f,
-                      sub_events: f.sub_events.filter((_, i) => i !== seIndex),
-                    }))
-                  }
-                  className="text-xs text-red-600"
-                >
-                  Remove
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <input
+                    type="checkbox"
+                    checked={se.is_active}
+                    onChange={(e) => updateSubEvent(seIndex, { is_active: e.target.checked })}
+                  />
+                  Visible to guests
+                </label>
+                {form.sub_events.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        sub_events: f.sub_events.filter((_, i) => i !== seIndex),
+                      }))
+                    }
+                    className="text-xs text-red-600"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
             <input
               required

@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
-import { eventsCache, listEvents } from "@/lib/queries/events";
+import { eventsCache, listEvents, setEventStatus } from "@/lib/queries/events";
+
+const statusStyles: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-700",
+  active: "bg-green-100 text-green-800",
+  ended: "bg-gray-100 text-gray-700",
+  cancelled: "bg-red-100 text-red-800",
+};
 
 function EventsSkeleton() {
   return (
@@ -22,6 +29,7 @@ export function EventsListClient() {
   });
 
   const companyId = profile?.companies?.id ?? null;
+  const queryClient = useQueryClient();
 
   const {
     data: events,
@@ -34,6 +42,13 @@ export function EventsListClient() {
   });
 
   const isLoading = profilePending || (!!companyId && eventsPending);
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ eventId, status }: { eventId: string; status: "draft" | "active" }) =>
+      setEventStatus(eventId, status),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: eventsCache.listKey(companyId) }),
+  });
 
   return (
     <div className="space-y-6">
@@ -77,7 +92,25 @@ export function EventsListClient() {
                 <Link href={`/events/${event.id}/leads`} className="text-sm text-blue-600">
                   Leads
                 </Link>
-                <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium capitalize text-gray-700">
+                {(event.status === "draft" || event.status === "active") && (
+                  <button
+                    onClick={() =>
+                      toggleStatusMutation.mutate({
+                        eventId: event.id,
+                        status: event.status === "active" ? "draft" : "active",
+                      })
+                    }
+                    disabled={toggleStatusMutation.isPending}
+                    className="rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                  >
+                    {event.status === "active" ? "Unpublish" : "Publish"}
+                  </button>
+                )}
+                <span
+                  className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
+                    statusStyles[event.status] ?? "bg-gray-100 text-gray-700"
+                  }`}
+                >
                   {event.status}
                 </span>
               </div>

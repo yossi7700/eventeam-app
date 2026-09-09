@@ -21,6 +21,7 @@ export type SubEventInput = {
   capacity?: number | null;
   is_sunset_relative?: boolean;
   sunset_offset_minutes?: number | null;
+  is_active?: boolean;
   sort_order?: number;
   products?: ProductInput[];
 };

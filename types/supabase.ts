@@ -1120,6 +1120,7 @@ export type Database = {
           end_at: string | null
           event_id: string
           id: string
+          is_active: boolean
           is_sunset_relative: boolean
           location: string | null
           sort_order: number
@@ -1135,6 +1136,7 @@ export type Database = {
           end_at?: string | null
           event_id: string
           id?: string
+          is_active?: boolean
           is_sunset_relative?: boolean
           location?: string | null
           sort_order?: number
@@ -1150,6 +1152,7 @@ export type Database = {
           end_at?: string | null
           event_id?: string
           id?: string
+          is_active?: boolean
           is_sunset_relative?: boolean
           location?: string | null
           sort_order?: number
