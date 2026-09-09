@@ -53,6 +53,7 @@ export type CreateEventInput = {
   sub_events?: SubEventInput[];
   advance?: EventAdvanceSettings;
   is_master_template?: boolean;
+  geonameid?: string | null;
 };
 
 export type UpdateEventInput = {
@@ -66,6 +67,7 @@ export type UpdateEventInput = {
   timezone?: string;
   sub_events?: SubEventInput[];
   advance?: EventAdvanceSettings;
+  geonameid?: string | null;
 };
 
 async function invoke<TResponse>(
@@ -215,6 +217,42 @@ export type PublishTemplateInput = {
 
 export function publishTemplateEvent(input: PublishTemplateInput) {
   return invoke<{ event_id: string }>("publish-template-event", input);
+}
+
+export type SunsetTimesResponse = {
+  date: string;
+  sunset: string | null;
+  candle_lighting: string | null;
+  havdalah: string | null;
+};
+
+// Public/anonymous-callable (verify_jwt: false on this function) -- used
+// by the public event page to resolve before_sunset/after_sunset/
+// before_candle/after_candle sub-event activity display times. Called as
+// a direct GET with query params rather than through the generic invoke()
+// helper (which only supports POST bodies).
+export async function getSunsetTimes(params: {
+  date: string;
+  geonameid?: string;
+  latitude?: number;
+  longitude?: number;
+  before_sunset_minutes?: number;
+}): Promise<SunsetTimesResponse> {
+  const url = new URL(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sunset-times`);
+  url.searchParams.set("date", params.date);
+  if (params.geonameid) url.searchParams.set("geonameid", params.geonameid);
+  if (params.latitude != null) url.searchParams.set("latitude", String(params.latitude));
+  if (params.longitude != null) url.searchParams.set("longitude", String(params.longitude));
+  if (params.before_sunset_minutes != null) {
+    url.searchParams.set("before_sunset_minutes", String(params.before_sunset_minutes));
+  }
+  const response = await fetch(url.toString(), {
+    headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "" },
+  });
+  if (!response.ok) {
+    throw new Error(`sunset-times request failed (${response.status})`);
+  }
+  return response.json();
 }
 
 export type OtpPurpose =

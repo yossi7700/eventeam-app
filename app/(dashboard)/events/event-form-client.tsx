@@ -10,6 +10,8 @@ import {
   type EventWithChildren,
 } from "@/lib/queries/events";
 import { templatesCache } from "@/lib/queries/templates";
+import { SubEventActivitiesManager } from "./sub-event-activities-manager";
+import { CitySearchInput } from "@/components/city-search-input";
 import {
   createEvent,
   updateEvent,
@@ -105,6 +107,7 @@ type FormState = {
   end_date: string;
   sub_events: FormSubEvent[];
   advance: FormAdvance;
+  geonameid: string;
 };
 
 function emptyProduct(): FormProduct {
@@ -154,6 +157,7 @@ function fromExisting(event: EventWithChildren): FormState {
       })),
     })),
     advance: advanceFromExisting(event),
+    geonameid: event.geonameid ?? "",
   };
 }
 
@@ -211,6 +215,7 @@ export function EventFormClient({
       end_date: "",
       sub_events: [emptySubEvent()],
       advance: emptyAdvance(),
+      geonameid: "",
     }
   );
   const [hydrated, setHydrated] = useState(mode === "create");
@@ -238,6 +243,7 @@ export function EventFormClient({
           sub_events,
           advance,
           is_master_template: isTemplate,
+          geonameid: form.geonameid || null,
         });
       }
 
@@ -250,6 +256,7 @@ export function EventFormClient({
         end_date: new Date(form.end_date).toISOString(),
         sub_events,
         advance,
+        geonameid: form.geonameid || null,
       });
     },
     onSuccess: async (data) => {
@@ -339,6 +346,17 @@ export function EventFormClient({
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="mt-1 w-full rounded-md border px-3 py-2"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">
+            Location (needed for sunset/candle-lighting-based sub-events and activities)
+          </label>
+          <div className="mt-1">
+            <CitySearchInput
+              geonameid={form.geonameid}
+              onChange={(geonameid) => setForm({ ...form, geonameid })}
+            />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -487,6 +505,8 @@ export function EventFormClient({
                 </div>
               ))}
             </div>
+
+            {se.id && <SubEventActivitiesManager subEventId={se.id} />}
           </div>
         ))}
       </div>

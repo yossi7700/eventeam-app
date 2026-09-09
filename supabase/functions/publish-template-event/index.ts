@@ -196,7 +196,11 @@ Deno.serve(async (req: Request) => {
   // since it's shared with the plain "create a standalone event" path).
   await serviceClient
     .from("events")
-    .update({ source: "published_from_template", template_id: body.template_event_id })
+    .update({
+      source: "published_from_template",
+      template_id: body.template_event_id,
+      geonameid: body.geonameid ?? null,
+    })
     .eq("id", newEventId);
 
   return jsonResponse({ event_id: newEventId }, 200, corsHeaders);

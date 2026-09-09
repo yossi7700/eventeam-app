@@ -49,6 +49,7 @@ type UpdateEventInput = {
   timezone?: string;
   sub_events?: SubEventInput[];
   advance?: EventAdvanceSettings;
+  geonameid?: string | null;
 };
 
 Deno.serve(async (req: Request) => {
@@ -87,6 +88,7 @@ Deno.serve(async (req: Request) => {
     p_timezone: body.timezone ?? null,
     p_sub_events: body.sub_events ?? [],
     p_advance: body.advance ?? null,
+    p_geonameid: body.geonameid ?? null,
   });
 
   if (error) {

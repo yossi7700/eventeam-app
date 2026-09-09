@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { getPublicEventWithChildren, publicBookingCache } from "@/lib/queries/public-booking";
+import { getSunsetTimes } from "@/lib/edge-functions";
+import { resolveActivityTime } from "@/lib/activity-time";
 
 export function EventDetailClient({
   companySlug,
@@ -15,6 +17,25 @@ export function EventDetailClient({
     queryKey: publicBookingCache.eventKey(companySlug, eventSlug),
     queryFn: () => getPublicEventWithChildren(companySlug, eventSlug),
   });
+
+  const hasActivitiesNeedingSunset = (event?.sub_events ?? []).some((se) =>
+    se.activities.some((a) => a.activity_type !== "fixed_time")
+  );
+
+  const { data: sunsetTimes } = useQuery({
+    queryKey: ["sunset-times", event?.id, event?.geonameid, event?.start_date],
+    queryFn: () =>
+      getSunsetTimes({
+        date: (event!.start_date as string).slice(0, 10),
+        geonameid: event!.geonameid!,
+      }),
+    enabled: !!event?.geonameid && !!event?.start_date && hasActivitiesNeedingSunset,
+  });
+
+  const sunsetTime = sunsetTimes?.sunset ? new Date(sunsetTimes.sunset) : null;
+  const candleLightingTime = sunsetTimes?.candle_lighting
+    ? new Date(sunsetTimes.candle_lighting)
+    : null;
 
   if (isPending) {
     return <div className="mx-auto h-64 max-w-2xl animate-pulse rounded-lg bg-gray-100" />;
@@ -43,6 +64,21 @@ export function EventDetailClient({
           <div key={se.id} className="rounded-lg border p-4">
             <h2 className="font-medium">{se.title}</h2>
             {se.location && <p className="text-sm text-gray-500">{se.location}</p>}
+
+            {se.activities.length > 0 && (
+              <ul className="mt-2 space-y-0.5 border-b pb-2 text-sm text-gray-600">
+                {se.activities.map((a) => {
+                  const time = resolveActivityTime(a, sunsetTime, candleLightingTime);
+                  return (
+                    <li key={a.id} className="flex items-center justify-between">
+                      <span>{a.title}</span>
+                      {time && <span className="text-gray-500">{time}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
             <ul className="mt-3 space-y-1">
               {se.products.map((p) => (
                 <li key={p.id} className="flex items-center justify-between text-sm">

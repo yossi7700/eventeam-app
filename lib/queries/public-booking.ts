@@ -6,6 +6,7 @@ export type PublicEvent = Tables<"public_events_view">;
 export type PublicSubEvent = Tables<"public_sub_events_view">;
 export type PublicProduct = Tables<"public_products_view">;
 export type PublicDonationField = Tables<"public_donation_fields_view">;
+export type PublicSubEventActivity = Tables<"public_sub_event_activities_view">;
 
 export type ResolvedAdvanceSettings = {
   is_attendees_required: boolean | null;
@@ -21,7 +22,10 @@ export type ResolvedAdvanceSettings = {
 };
 
 export type PublicEventWithChildren = PublicEvent & {
-  sub_events: (PublicSubEvent & { products: PublicProduct[] })[];
+  sub_events: (PublicSubEvent & {
+    products: PublicProduct[];
+    activities: PublicSubEventActivity[];
+  })[];
   donation_fields: PublicDonationField[];
   advance: ResolvedAdvanceSettings | null;
 };
@@ -86,7 +90,9 @@ export async function getPublicEventWithChildren(
   ] = await Promise.all([
     supabase
       .from("public_sub_events_view")
-      .select("*, products:public_products_view(*)")
+      .select(
+        "*, products:public_products_view(*), activities:public_sub_event_activities_view(*)"
+      )
       .eq("event_id", event.id)
       .order("sort_order"),
     supabase

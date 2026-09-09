@@ -520,6 +520,7 @@ export type Database = {
           created_at: string
           description: string | null
           end_date: string
+          geonameid: string | null
           id: string
           is_master_template: boolean
           override_is_attendees_required: boolean | null
@@ -546,6 +547,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date: string
+          geonameid?: string | null
           id?: string
           is_master_template?: boolean
           override_is_attendees_required?: boolean | null
@@ -572,6 +574,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string
+          geonameid?: string | null
           id?: string
           is_master_template?: boolean
           override_is_attendees_required?: boolean | null
@@ -1118,6 +1121,60 @@ export type Database = {
           },
         ]
       }
+      sub_event_activities: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["sub_event_activity_type"]
+          created_at: string
+          fixed_time: string | null
+          id: string
+          is_show: boolean
+          sort_order: number
+          sub_event_id: string
+          time_minutes: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_type?: Database["public"]["Enums"]["sub_event_activity_type"]
+          created_at?: string
+          fixed_time?: string | null
+          id?: string
+          is_show?: boolean
+          sort_order?: number
+          sub_event_id: string
+          time_minutes?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["sub_event_activity_type"]
+          created_at?: string
+          fixed_time?: string | null
+          id?: string
+          is_show?: boolean
+          sort_order?: number
+          sub_event_id?: string
+          time_minutes?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_event_activities_sub_event_id_fkey"
+            columns: ["sub_event_id"]
+            isOneToOne: false
+            referencedRelation: "public_sub_events_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sub_event_activities_sub_event_id_fkey"
+            columns: ["sub_event_id"]
+            isOneToOne: false
+            referencedRelation: "sub_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sub_events: {
         Row: {
           capacity: number | null
@@ -1249,6 +1306,7 @@ export type Database = {
           cover_image_path: string | null
           description: string | null
           end_date: string | null
+          geonameid: string | null
           id: string | null
           slug: string | null
           start_date: string | null
@@ -1279,6 +1337,35 @@ export type Database = {
           },
           {
             foreignKeyName: "products_sub_event_id_fkey"
+            columns: ["sub_event_id"]
+            isOneToOne: false
+            referencedRelation: "sub_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_sub_event_activities_view: {
+        Row: {
+          activity_type:
+            | Database["public"]["Enums"]["sub_event_activity_type"]
+            | null
+          fixed_time: string | null
+          id: string | null
+          sort_order: number | null
+          sub_event_id: string | null
+          time_minutes: number | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_event_activities_sub_event_id_fkey"
+            columns: ["sub_event_id"]
+            isOneToOne: false
+            referencedRelation: "public_sub_events_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sub_event_activities_sub_event_id_fkey"
             columns: ["sub_event_id"]
             isOneToOne: false
             referencedRelation: "sub_events"
@@ -1334,6 +1421,7 @@ export type Database = {
           p_cover_image_path: string
           p_description: string
           p_end_date: string
+          p_geonameid?: string
           p_is_master_template?: boolean
           p_slug: string
           p_start_date: string
@@ -1414,6 +1502,7 @@ export type Database = {
           p_description: string
           p_end_date: string
           p_event_id: string
+          p_geonameid?: string
           p_slug: string
           p_start_date: string
           p_sub_events: Json
@@ -1463,6 +1552,12 @@ export type Database = {
         | "restricted"
         | "active"
         | "disabled"
+      sub_event_activity_type:
+        | "fixed_time"
+        | "before_sunset"
+        | "after_sunset"
+        | "before_candle"
+        | "after_candle"
       user_role: "admin" | "company" | "client"
     }
     CompositeTypes: {
@@ -1626,6 +1721,13 @@ export const Constants = {
         "restricted",
         "active",
         "disabled",
+      ],
+      sub_event_activity_type: [
+        "fixed_time",
+        "before_sunset",
+        "after_sunset",
+        "before_candle",
+        "after_candle",
       ],
       user_role: ["admin", "company", "client"],
     },

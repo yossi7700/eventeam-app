@@ -48,6 +48,7 @@ type CreateEventInput = {
   sub_events?: SubEventInput[];
   advance?: EventAdvanceSettings;
   is_master_template?: boolean;
+  geonameid?: string | null;
 };
 
 Deno.serve(async (req: Request) => {
@@ -88,6 +89,7 @@ Deno.serve(async (req: Request) => {
     p_sub_events: body.sub_events ?? [],
     p_advance: body.advance ?? null,
     p_is_master_template: isMasterTemplate,
+    p_geonameid: body.geonameid ?? null,
   });
 
   if (error) {
