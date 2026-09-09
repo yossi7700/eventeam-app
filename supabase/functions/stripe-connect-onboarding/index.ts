@@ -93,6 +93,16 @@ Deno.serve(async (req: Request) => {
       // this write, having already verified `company` belongs to the
       // caller via the user-scoped client above.
       const serviceClient = createServiceClient();
+      // account.external_accounts is only populated when expanded; Stripe's
+      // default accounts.retrieve() response already includes it for
+      // Connect Standard accounts the platform can read, matching the old
+      // system's StripeConnectDetail capture of the connected bank/business
+      // display metadata (previously discarded here despite already being
+      // fetched).
+      const externalAccount = account.external_accounts?.data?.[0] as
+        | { bank_name?: string; last4?: string }
+        | undefined;
+
       await serviceClient.from("stripe_accounts").upsert({
         company_id: company.id,
         stripe_account_id: response.stripe_user_id,
@@ -101,6 +111,11 @@ Deno.serve(async (req: Request) => {
         payouts_enabled: account.payouts_enabled ?? false,
         details_submitted: account.details_submitted ?? false,
         connected_at: new Date().toISOString(),
+        business_name: account.business_profile?.name ?? null,
+        business_email: account.email ?? null,
+        account_type: account.type ?? null,
+        bank_name: externalAccount?.bank_name ?? null,
+        bank_account_last4: externalAccount?.last4 ?? null,
       });
 
       return jsonResponse({ connected: true, stripe_account_id: response.stripe_user_id }, 200, corsHeaders);

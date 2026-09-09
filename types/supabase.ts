@@ -1062,6 +1062,11 @@ export type Database = {
       }
       stripe_accounts: {
         Row: {
+          account_type: string | null
+          bank_account_last4: string | null
+          bank_name: string | null
+          business_email: string | null
+          business_name: string | null
           charges_enabled: boolean
           company_id: string
           connected_at: string | null
@@ -1074,6 +1079,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_type?: string | null
+          bank_account_last4?: string | null
+          bank_name?: string | null
+          business_email?: string | null
+          business_name?: string | null
           charges_enabled?: boolean
           company_id: string
           connected_at?: string | null
@@ -1086,6 +1096,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_type?: string | null
+          bank_account_last4?: string | null
+          bank_name?: string | null
+          business_email?: string | null
+          business_name?: string | null
           charges_enabled?: boolean
           company_id?: string
           connected_at?: string | null

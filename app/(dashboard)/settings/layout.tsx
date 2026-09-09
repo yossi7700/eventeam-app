@@ -10,6 +10,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <Link href="/settings/company" className="text-gray-600 hover:text-black">
           Company
         </Link>
+        <Link href="/settings/payment" className="text-gray-600 hover:text-black">
+          Payment
+        </Link>
         <Link href="/settings/security" className="text-gray-600 hover:text-black">
           Security
         </Link>

@@ -276,3 +276,23 @@ export type VerifyOtpInput = {
 export function verifyOtp(input: VerifyOtpInput) {
   return invoke<{ verified: boolean; purpose: OtpPurpose }>("verify-otp", input);
 }
+
+// stripe-connect-onboarding is GET (authorize-url) + POST (code exchange),
+// not a fit for the generic POST-only invoke() helper -- called directly
+// via supabase.functions.invoke with an explicit method instead.
+export async function getStripeConnectAuthorizeUrl(): Promise<{ url: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.functions.invoke<{ url: string }>(
+    "stripe-connect-onboarding?action=authorize-url",
+    { method: "GET" }
+  );
+  if (error) throw new Error(error.message);
+  return data as { url: string };
+}
+
+export function completeStripeConnectOnboarding(code: string) {
+  return invoke<{ connected: boolean; stripe_account_id: string }>(
+    "stripe-connect-onboarding",
+    { code }
+  );
+}
