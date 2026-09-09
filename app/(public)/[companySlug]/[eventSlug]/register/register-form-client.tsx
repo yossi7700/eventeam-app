@@ -45,6 +45,8 @@ export function RegisterFormClient({
   const donationAllowed = advance?.is_donation_allowed ?? false;
   const attendeesRequired = advance?.is_attendees_required ?? false;
   const showRegulation = advance?.is_show_regulation ?? false;
+  const showAppFee = advance?.is_show_app_fee ?? false;
+  const platformFeePct = advance?.platform_fee_pct ?? 0;
 
   // Derived during render rather than synced via an effect: if the user
   // hasn't picked a method yet, or their pick is no longer valid once the
@@ -82,6 +84,21 @@ export function RegisterFormClient({
   const allProducts = event.sub_events.flatMap((se) =>
     se.products.map((p) => ({ ...p, sub_event_id: se.id, sub_event_title: se.title }))
   );
+
+  // Gap-audit item: old reg-test.blade.php's updateTotal() showed a live
+  // running total including the platform-fee line before checkout ("Add
+  // 5% ($X) for platform fee"), so a guest always knew the final charge
+  // before paying. This estimate mirrors register_guest_for_event's own
+  // math (subtotal + donation, fee on that combined base) -- the server
+  // is still the actual source of truth for the charge amount.
+  const ticketsSubtotal = allProducts.reduce(
+    (sum, p) => sum + Number(p.price ?? 0) * (quantities[p.id!] ?? 0),
+    0
+  );
+  const donationValue = Number(donationAmount) || 0;
+  const feeBase = ticketsSubtotal + donationValue;
+  const estimatedPlatformFee = showAppFee ? Math.round(feeBase * (platformFeePct / 100) * 100) / 100 : 0;
+  const estimatedTotal = feeBase + estimatedPlatformFee;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -274,6 +291,34 @@ export function RegisterFormClient({
             {company?.regulation_text ?? "I agree to the terms and conditions for this event."}
           </span>
         </label>
+      )}
+
+      {ticketsSubtotal > 0 && (
+        <div className="space-y-1 rounded-lg border p-3 text-sm">
+          <div className="flex justify-between text-gray-500">
+            <span>Tickets</span>
+            <span>${ticketsSubtotal.toFixed(2)}</span>
+          </div>
+          {donationValue > 0 && (
+            <div className="flex justify-between text-gray-500">
+              <span>Donation</span>
+              <span>${donationValue.toFixed(2)}</span>
+            </div>
+          )}
+          {showAppFee && estimatedPlatformFee > 0 && (
+            <div className="flex justify-between text-gray-500">
+              <span>
+                Platform fee ({platformFeePct}%)
+                {advance?.platform_fee_text ? ` — ${advance.platform_fee_text}` : ""}
+              </span>
+              <span>${estimatedPlatformFee.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-t pt-1 font-medium text-black">
+            <span>Total</span>
+            <span>${estimatedTotal.toFixed(2)}</span>
+          </div>
+        </div>
       )}
 
       <button
