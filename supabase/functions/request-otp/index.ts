@@ -60,9 +60,32 @@ Deno.serve(async (req: Request) => {
 
   const serviceClient = createServiceClient();
 
-  // Rate-limit: at most one active (unconsumed, unexpired) OTP per
-  // profile+purpose at a time. Requesting again invalidates the previous
-  // one rather than stacking multiple valid codes.
+  // Gap-audit item: old HomeController::sendOTP capped requests at 5 per
+  // email+type per 5-minute window (querying the otps table's created_at
+  // before inserting a new row) -- this endpoint had no equivalent limit,
+  // so an authenticated caller could email-bomb their own inbox (or drain
+  // the Resend quota) with unlimited OTP requests. Counted here, before
+  // the delete-and-replace below, since that delete would otherwise erase
+  // the very rows a count needs to see.
+  const rateLimitWindowStart = new Date(Date.now() - 5 * 60_000).toISOString();
+  const { count: recentRequestCount } = await serviceClient
+    .from("otp_verifications")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", user.id)
+    .eq("purpose", body.purpose)
+    .gte("created_at", rateLimitWindowStart);
+
+  if ((recentRequestCount ?? 0) >= 5) {
+    return errorResponse(
+      "Too many OTP requests. Please wait a few minutes and try again.",
+      429,
+      corsHeaders
+    );
+  }
+
+  // At most one active (unconsumed, unexpired) OTP per profile+purpose at
+  // a time. Requesting again invalidates the previous one rather than
+  // stacking multiple valid codes.
   await serviceClient
     .from("otp_verifications")
     .delete()
