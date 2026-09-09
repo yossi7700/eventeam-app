@@ -3,9 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { Lock } from "lucide-react";
 import { getStripe } from "@/lib/stripe-client";
 import { registerGuest } from "@/lib/edge-functions";
 import { loadRegistrationDraft, clearRegistrationDraft } from "@/lib/registration-draft";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function CheckoutForm({
   companySlug,
@@ -49,14 +54,15 @@ function CheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <PaymentElement />
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={!stripe || submitting}
-        className="w-full rounded-md bg-black px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
-      >
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <Button type="submit" disabled={!stripe || submitting} size="lg" className="w-full">
+        <Lock />
         {submitting ? "Processing..." : "Pay now"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -108,22 +114,43 @@ export function PaymentClient({
 
   if (error) {
     return (
-      <div className="mx-auto max-w-2xl py-16 text-center">
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="mx-auto max-w-2xl py-16">
+        <Alert variant="destructive">
+          <AlertTitle>Something went wrong</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   if (!clientSecret || !registrationId) {
-    return <div className="mx-auto h-64 max-w-2xl animate-pulse rounded-lg bg-gray-100" />;
+    return (
+      <div className="mx-auto max-w-2xl space-y-4 py-12">
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 py-12">
-      <h1 className="text-2xl font-semibold">Payment</h1>
-      <Elements stripe={getStripe()} options={{ clientSecret }}>
-        <CheckoutForm companySlug={companySlug} eventSlug={eventSlug} registrationId={registrationId} />
-      </Elements>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Payment</h1>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Lock className="size-3.5" />
+          Secured by Stripe
+        </p>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Card details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Elements stripe={getStripe()} options={{ clientSecret }}>
+            <CheckoutForm companySlug={companySlug} eventSlug={eventSlug} registrationId={registrationId} />
+          </Elements>
+        </CardContent>
+      </Card>
     </div>
   );
 }

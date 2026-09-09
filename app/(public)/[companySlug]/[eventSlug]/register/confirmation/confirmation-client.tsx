@@ -1,6 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 // Gap-audit item: old system's Registration.reg_id ("REG-xxxxxxxxxx", see
 // generateRegNumber() in app/Helpers/helper.php) gave guests a short,
@@ -20,19 +23,23 @@ export function ConfirmationClient() {
   const registrationId = searchParams.get("registration_id");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 py-16 text-center">
-      <h1 className="text-2xl font-semibold">You&apos;re registered!</h1>
-      <p className="text-gray-600">
-        A confirmation email is on its way. Thanks for registering.
-      </p>
-      {registrationId && (
-        <p className="text-sm text-gray-500">
-          Booking reference:{" "}
-          <span className="font-mono font-medium text-gray-700">
-            {formatReference(registrationId)}
+    <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4">
+      <Card className="w-full">
+        <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="size-7" />
           </span>
-        </p>
-      )}
+          <h1 className="text-2xl font-semibold tracking-tight">You&apos;re registered!</h1>
+          <p className="text-muted-foreground">
+            A confirmation email is on its way. Thanks for registering.
+          </p>
+          {registrationId && (
+            <Badge variant="secondary" className="mt-2 font-mono text-sm">
+              {formatReference(registrationId)}
+            </Badge>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
