@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { CalendarDays, Clock, MapPin, Ticket } from "lucide-react";
 import {
   getPublicCompanyProfile,
   getPublicEventWithChildren,
@@ -9,6 +11,11 @@ import {
 } from "@/lib/queries/public-booking";
 import { getSunsetTimes } from "@/lib/edge-functions";
 import { resolveActivityTime } from "@/lib/activity-time";
+import { storageUrl } from "@/lib/storage-url";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 
 // Gap-audit item: old HomeController::getBookingEventDetail returned
 // formatUSAddress(...) + googlemaplink alongside the event, gated on the
@@ -70,7 +77,13 @@ export function EventDetailClient({
     : null;
 
   if (isPending) {
-    return <div className="mx-auto h-64 max-w-2xl animate-pulse rounded-lg bg-gray-100" />;
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 py-12">
+        <Skeleton className="h-48 w-full rounded-2xl" />
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+    );
   }
 
   if (!event) {
@@ -83,72 +96,125 @@ export function EventDetailClient({
 
   const showAddress = event.advance?.is_show_address ?? false;
   const formattedAddress = company ? formatAddress(company) : null;
+  const coverUrl = storageUrl("event-images", event.cover_image_path);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 py-12">
-      <div>
-        <h1 className="text-3xl font-bold">{event.title}</h1>
-        {event.description && <p className="mt-2 text-gray-600">{event.description}</p>}
-        <p className="mt-1 text-sm text-gray-500">
-          {event.start_date && new Date(event.start_date).toLocaleString()}
-        </p>
-        {showAddress && (formattedAddress || company?.google_maps_url) && (
-          <div className="mt-2 text-sm text-gray-500">
-            {formattedAddress && <p>{formattedAddress}</p>}
-            {company?.google_maps_url && (
-              <a
-                href={company.google_maps_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                Get directions
-              </a>
-            )}
-          </div>
-        )}
+    <div className="mx-auto max-w-2xl space-y-8 pb-28">
+      {coverUrl ? (
+        <div className="relative -mx-4 h-56 overflow-hidden sm:mx-0 sm:h-72 sm:rounded-2xl">
+          <Image src={coverUrl} alt="" fill priority className="object-cover" />
+        </div>
+      ) : (
+        <div className="-mx-4 h-8 sm:mx-0" />
+      )}
+
+      <div className="space-y-2 px-4 sm:px-0">
+        <h1 className="text-3xl font-bold tracking-tight">{event.title}</h1>
+        {event.description && <p className="text-muted-foreground">{event.description}</p>}
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-sm text-muted-foreground">
+          {event.start_date && (
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="size-4" />
+              {new Date(event.start_date).toLocaleString(undefined, {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+          {showAddress && formattedAddress && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="size-4" />
+              {formattedAddress}
+              {company?.google_maps_url && (
+                <a
+                  href={company.google_maps_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  (directions)
+                </a>
+              )}
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-4 sm:px-0">
         {event.sub_events.map((se) => (
-          <div key={se.id} className="rounded-lg border p-4">
-            <h2 className="font-medium">{se.title}</h2>
-            {se.location && <p className="text-sm text-gray-500">{se.location}</p>}
+          <Card key={se.id}>
+            <CardContent className="space-y-3">
+              <div>
+                <h2 className="font-semibold">{se.title}</h2>
+                {se.location && (
+                  <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <MapPin className="size-3.5" />
+                    {se.location}
+                  </p>
+                )}
+              </div>
 
-            {se.activities.length > 0 && (
-              <ul className="mt-2 space-y-0.5 border-b pb-2 text-sm text-gray-600">
-                {se.activities.map((a) => {
-                  const time = resolveActivityTime(a, sunsetTime, candleLightingTime);
-                  return (
-                    <li key={a.id} className="flex items-center justify-between">
-                      <span>{a.title}</span>
-                      {time && <span className="text-gray-500">{time}</span>}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+              {se.activities.length > 0 && (
+                <>
+                  <Separator />
+                  <ul className="space-y-1.5 text-sm">
+                    {se.activities.map((a) => {
+                      const time = resolveActivityTime(a, sunsetTime, candleLightingTime);
+                      return (
+                        <li key={a.id} className="flex items-center justify-between text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="size-3.5" />
+                            {a.title}
+                          </span>
+                          {time && <span className="font-medium text-foreground">{time}</span>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
 
-            <ul className="mt-3 space-y-1">
-              {se.products.map((p) => (
-                <li key={p.id} className="flex items-center justify-between text-sm">
-                  <span>{p.name}</span>
-                  <span className="font-medium">
-                    {p.price} {p.currency}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+              {se.products.length > 0 && (
+                <>
+                  <Separator />
+                  <ul className="space-y-1.5 text-sm">
+                    {se.products.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          {p.color && (
+                            <span
+                              aria-hidden
+                              className="size-2.5 rounded-full"
+                              style={{ backgroundColor: p.color }}
+                            />
+                          )}
+                          {p.name}
+                        </span>
+                        <span className="font-medium">
+                          {p.price} {p.currency}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      <Link
-        href={`/${companySlug}/${eventSlug}/register`}
-        className="block w-full rounded-md bg-black px-4 py-3 text-center text-sm font-medium text-white"
-      >
-        Register
-      </Link>
+      <div className="fixed inset-x-0 bottom-0 border-t bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto max-w-2xl">
+          <Button render={<Link href={`/${companySlug}/${eventSlug}/register`} />} size="lg" className="w-full">
+            <Ticket />
+            Register
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
