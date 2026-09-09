@@ -123,6 +123,9 @@ export type DashboardKpis = {
   active_events: number;
   total_companies: number | null;
   pending_companies: number | null;
+  active_companies: number | null;
+  inactive_companies: number | null;
+  stripe_connected: number | null;
   total_guests: number;
   total_registrations: number;
   total_earnings: number;

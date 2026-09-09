@@ -48,6 +48,15 @@ export function DashboardKpisClient() {
           {kpis.pending_companies !== null && (
             <KpiTile label="Pending companies" value={kpis.pending_companies} />
           )}
+          {kpis.active_companies !== null && (
+            <KpiTile label="Active companies" value={kpis.active_companies} />
+          )}
+          {kpis.inactive_companies !== null && (
+            <KpiTile label="Inactive companies" value={kpis.inactive_companies} />
+          )}
+          {kpis.stripe_connected !== null && (
+            <KpiTile label="Stripe connected" value={kpis.stripe_connected} />
+          )}
           <KpiTile label="Total guests" value={kpis.total_guests} />
           <KpiTile label="Total registrations" value={kpis.total_registrations} />
           <KpiTile label="Total earnings" value={`$${kpis.total_earnings.toFixed(2)}`} />
