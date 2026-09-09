@@ -3,14 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, X } from "lucide-react";
 import { companiesCache, listAllCompanies } from "@/lib/queries/companies";
 import { approveCompany } from "@/lib/edge-functions";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const statusStyles: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  active: "bg-green-100 text-green-800",
-  suspended: "bg-orange-100 text-orange-800",
-  rejected: "bg-red-100 text-red-800",
+const statusVariants: Record<string, "outline" | "default" | "secondary" | "destructive"> = {
+  pending: "outline",
+  active: "default",
+  suspended: "secondary",
+  rejected: "destructive",
 };
 
 export function CompaniesListClient() {
@@ -30,88 +37,94 @@ export function CompaniesListClient() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Companies</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Companies</h1>
+        <p className="text-sm text-muted-foreground">Review and approve company applications.</p>
+      </div>
 
       {isPending && (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100" />
+            <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">Failed to load companies: {error.message}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Couldn&apos;t load companies</AlertTitle>
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
 
       {companies && (
-        <ul className="divide-y rounded-lg border">
+        <div className="grid gap-2">
           {companies.map((company) => (
-            <li key={company.id} className="space-y-2 px-4 py-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Link href={`/companies/${company.id}`} className="font-medium hover:underline">
-                    {company.name}
-                  </Link>
-                  <p className="text-sm text-gray-500">{company.contact_email}</p>
+            <Card key={company.id} className="py-0">
+              <CardContent className="space-y-2 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link href={`/companies/${company.id}`} className="truncate font-medium hover:underline">
+                      {company.name}
+                    </Link>
+                    <p className="truncate text-sm text-muted-foreground">{company.contact_email}</p>
+                  </div>
+                  <Badge variant={statusVariants[company.status] ?? "outline"} className="shrink-0 capitalize">
+                    {company.status}
+                  </Badge>
                 </div>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-                    statusStyles[company.status] ?? "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {company.status}
-                </span>
-              </div>
 
-              {company.status === "pending" && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => mutation.mutate({ company_id: company.id, approve: true })}
-                    disabled={mutation.isPending}
-                    className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  {rejectingId === company.id ? (
-                    <>
-                      <input
-                        placeholder="Reason"
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        className="rounded-md border px-2 py-1 text-xs"
-                      />
-                      <button
-                        onClick={() => {
-                          mutation.mutate({
-                            company_id: company.id,
-                            approve: false,
-                            rejected_reason: rejectReason,
-                          });
-                          setRejectingId(null);
-                          setRejectReason("");
-                        }}
-                        disabled={mutation.isPending}
-                        className="rounded-md border border-red-600 px-3 py-1.5 text-xs font-medium text-red-600 disabled:opacity-50"
-                      >
-                        Confirm reject
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setRejectingId(company.id)}
-                      className="rounded-md border px-3 py-1.5 text-xs font-medium"
+                {company.status === "pending" && (
+                  <div className="flex items-center gap-2 border-t pt-2">
+                    <Button
+                      size="sm"
+                      onClick={() => mutation.mutate({ company_id: company.id, approve: true })}
+                      disabled={mutation.isPending}
                     >
-                      Reject
-                    </button>
-                  )}
-                </div>
-              )}
+                      <Check className="size-3.5" />
+                      Approve
+                    </Button>
+                    {rejectingId === company.id ? (
+                      <>
+                        <Input
+                          placeholder="Reason"
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          className="h-8 flex-1 text-xs"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            mutation.mutate({
+                              company_id: company.id,
+                              approve: false,
+                              rejected_reason: rejectReason,
+                            });
+                            setRejectingId(null);
+                            setRejectReason("");
+                          }}
+                          disabled={mutation.isPending}
+                        >
+                          Confirm reject
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => setRejectingId(company.id)}>
+                        <X className="size-3.5" />
+                        Reject
+                      </Button>
+                    )}
+                  </div>
+                )}
 
-              {mutation.error && mutation.variables?.company_id === company.id && (
-                <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
-              )}
-            </li>
+                {mutation.error && mutation.variables?.company_id === company.id && (
+                  <p className="text-xs text-destructive">{(mutation.error as Error).message}</p>
+                )}
+              </CardContent>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

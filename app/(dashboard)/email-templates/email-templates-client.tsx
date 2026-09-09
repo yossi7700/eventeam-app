@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
 import {
   EMAIL_TEMPLATE_KINDS,
@@ -10,6 +11,14 @@ import {
   upsertEmailTemplate,
   type EmailTemplate,
 } from "@/lib/queries/email-templates";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const kindLabels: Record<(typeof EMAIL_TEMPLATE_KINDS)[number], string> = {
   registration_confirmation: "Registration Confirmation",
@@ -48,8 +57,10 @@ function TemplateForm({
 
   const saveMutation = useMutation({
     mutationFn: upsertEmailTemplate,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: emailTemplatesCache.listKey(companyId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: emailTemplatesCache.listKey(companyId) });
+      toast.success("Template saved.");
+    },
   });
 
   function handleSave(e: React.FormEvent) {
@@ -64,50 +75,55 @@ function TemplateForm({
   const variables = kindVariables[kind];
 
   return (
-    <form onSubmit={handleSave} className="space-y-3">
-      <p className="text-xs text-gray-500">
-        Available variables for this email:{" "}
-        {variables.map((v) => (
-          <code key={v} className="mr-1 rounded bg-gray-100 px-1 py-0.5">
-            {`{{${v}}}`}
-          </code>
-        ))}
-      </p>
-      <input
-        required
-        placeholder="Subject"
-        value={subject}
-        onChange={(e) => setSubject(e.target.value)}
-        className="w-full rounded-md border px-3 py-2"
-      />
-      <textarea
-        required
-        rows={12}
-        placeholder="HTML body"
-        value={bodyHtml}
-        onChange={(e) => setBodyHtml(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 font-mono text-sm"
-      />
-      <label className="block text-xs text-gray-500">
-        CC additional recipients (comma-separated) on every email of this type
-        <input
-          placeholder="manager@example.com, office@example.com"
-          value={ccEmails}
-          onChange={(e) => setCcEmails(e.target.value)}
-          className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-        />
-      </label>
-      {saveMutation.error && (
-        <p className="text-sm text-red-600">{(saveMutation.error as Error).message}</p>
-      )}
-      <button
-        type="submit"
-        disabled={saveMutation.isPending}
-        className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {saveMutation.isPending ? "Saving..." : "Save Template"}
-      </button>
-    </form>
+    <Card>
+      <CardContent>
+        <form onSubmit={handleSave} className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Available variables for this email:{" "}
+            {variables.map((v) => (
+              <code key={v} className="mr-1 rounded bg-muted px-1 py-0.5 text-[11px]">
+                {`{{${v}}}`}
+              </code>
+            ))}
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="et-subject">Subject</Label>
+            <Input id="et-subject" required value={subject} onChange={(e) => setSubject(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="et-body">HTML body</Label>
+            <Textarea
+              id="et-body"
+              required
+              rows={12}
+              value={bodyHtml}
+              onChange={(e) => setBodyHtml(e.target.value)}
+              className="font-mono text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="et-cc">CC additional recipients</Label>
+            <p className="text-xs text-muted-foreground">
+              Comma-separated, added to every email of this type
+            </p>
+            <Input
+              id="et-cc"
+              placeholder="manager@example.com, office@example.com"
+              value={ccEmails}
+              onChange={(e) => setCcEmails(e.target.value)}
+            />
+          </div>
+          {saveMutation.error && (
+            <Alert variant="destructive">
+              <AlertDescription>{(saveMutation.error as Error).message}</AlertDescription>
+            </Alert>
+          )}
+          <Button type="submit" disabled={saveMutation.isPending}>
+            {saveMutation.isPending ? "Saving..." : "Save Template"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -130,24 +146,24 @@ export function EmailTemplatesClient() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold">Email Templates</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Email Templates</h1>
 
-      <div className="flex flex-wrap gap-2">
-        {EMAIL_TEMPLATE_KINDS.map((kind) => (
-          <button
-            key={kind}
-            onClick={() => setActiveKind(kind)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-              activeKind === kind ? "bg-black text-white" : "border"
-            }`}
-          >
-            {kindLabels[kind]}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeKind} onValueChange={(v) => setActiveKind(v as typeof activeKind)}>
+        <TabsList className="h-auto flex-wrap">
+          {EMAIL_TEMPLATE_KINDS.map((kind) => (
+            <TabsTrigger key={kind} value={kind}>
+              {kindLabels[kind]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      {isPending && <div className="h-64 animate-pulse rounded-lg bg-gray-100" />}
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
+      {isPending && <Skeleton className="h-64 w-full rounded-xl" />}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
 
       {companyId && templates && (
         <TemplateForm
