@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Building2, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getMyProfile, profileCache } from "@/lib/queries/profile";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function slugify(name: string): string {
   return name
@@ -83,42 +90,59 @@ export function OnboardingClient() {
   }
 
   if (profilePending) {
-    return <div className="mx-auto mt-24 h-48 max-w-sm animate-pulse rounded-lg bg-gray-100" />;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+        <Skeleton className="h-72 w-full max-w-sm rounded-2xl" />
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center space-y-6 px-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Set up your company</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          An admin will review and approve your account before you can publish events.
-        </p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Building2 className="size-5" />
+          </span>
+          <h1 className="text-xl font-semibold tracking-tight">Set up your company</h1>
+        </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input
-          required
-          placeholder="Company name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-        />
-        <input
-          type="email"
-          placeholder="Contact email (defaults to your login email)"
-          value={contactEmail}
-          onChange={(e) => setContactEmail(e.target.value)}
-          className="w-full rounded-md border px-3 py-2 text-sm"
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {submitting ? "Creating..." : "Continue"}
-        </button>
-      </form>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Company details</CardTitle>
+            <CardDescription>
+              An admin will review and approve your account before you can publish events.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="onboard-name">Company name</Label>
+                <Input id="onboard-name" required value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="onboard-email">Contact email</Label>
+                <Input
+                  id="onboard-email"
+                  type="email"
+                  placeholder="Defaults to your login email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                />
+              </div>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? "Creating..." : "Continue"}
+                <ArrowRight />
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
