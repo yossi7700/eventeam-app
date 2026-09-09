@@ -10,7 +10,8 @@ type SendEmailInput = {
     | "company_signup"
     | "company_approved"
     | "company_rejected"
-    | "otp_code";
+    | "otp_code"
+    | "pending_cash_reminder";
   to: string;
   variables?: Record<string, string>;
 };

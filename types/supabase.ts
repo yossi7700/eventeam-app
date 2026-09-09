@@ -52,6 +52,27 @@ export type Database = {
           },
         ]
       }
+      cities: {
+        Row: {
+          city_name: string
+          country_code: string
+          geonameid: string
+          region_name: string | null
+        }
+        Insert: {
+          city_name: string
+          country_code: string
+          geonameid: string
+          region_name?: string | null
+        }
+        Update: {
+          city_name?: string
+          country_code?: string
+          geonameid?: string
+          region_name?: string | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address_line1: string | null
@@ -425,6 +446,7 @@ export type Database = {
           start_date: string
           status: Database["public"]["Enums"]["event_status"]
           template_id: string | null
+          thank_you_sent_at: string | null
           timezone: string
           title: string
           updated_at: string
@@ -450,6 +472,7 @@ export type Database = {
           start_date: string
           status?: Database["public"]["Enums"]["event_status"]
           template_id?: string | null
+          thank_you_sent_at?: string | null
           timezone?: string
           title: string
           updated_at?: string
@@ -475,6 +498,7 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["event_status"]
           template_id?: string | null
+          thank_you_sent_at?: string | null
           timezone?: string
           title?: string
           updated_at?: string
@@ -1208,6 +1232,7 @@ export type Database = {
           p_cover_image_path: string
           p_description: string
           p_end_date: string
+          p_is_master_template?: boolean
           p_slug: string
           p_start_date: string
           p_sub_events: Json
@@ -1251,6 +1276,35 @@ export type Database = {
           platform_fee_text: string
         }[]
       }
+      send_thank_you_emails: { Args: never; Returns: undefined }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      toggle_cash_payment_cleared: {
+        Args: { p_payment_id: string }
+        Returns: {
+          amount: number
+          application_fee_amount: number | null
+          cleared_at: string | null
+          cleared_by: string | null
+          created_at: string
+          currency: string
+          failure_reason: string | null
+          id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          registration_id: string
+          status: Database["public"]["Enums"]["payment_status"]
+          stripe_charge_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_transfer_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "guest_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_event_with_children: {
         Args: {
           p_advance?: Json
@@ -1283,6 +1337,7 @@ export type Database = {
         | "company_approved"
         | "company_rejected"
         | "otp_code"
+        | "pending_cash_reminder"
       event_source: "standalone" | "published_from_template"
       event_status: "draft" | "active" | "ended" | "cancelled"
       otp_purpose:
@@ -1442,6 +1497,7 @@ export const Constants = {
         "company_approved",
         "company_rejected",
         "otp_code",
+        "pending_cash_reminder",
       ],
       event_source: ["standalone", "published_from_template"],
       event_status: ["draft", "active", "ended", "cancelled"],

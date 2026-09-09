@@ -154,6 +154,24 @@ export function exportLeadsCsv(eventId: string) {
   });
 }
 
+export type GuestPayment = {
+  id: string;
+  status: string;
+  method: "card" | "cash";
+  cleared_by: string | null;
+  cleared_at: string | null;
+};
+
+export function markCashCleared(paymentId: string) {
+  return invoke<{ payment: GuestPayment }>("mark-cash-cleared", { payment_id: paymentId });
+}
+
+export function notifyCashPending(registrationId: string) {
+  return invoke<{ notified: boolean }>("notify-cash-pending", {
+    registration_id: registrationId,
+  });
+}
+
 export type PublishTemplateInput = {
   template_event_id: string;
   target_date: string;

@@ -3,6 +3,7 @@ import type { Tables } from "@/types/supabase";
 
 export type RegistrationWithGuests = Tables<"registrations"> & {
   guests: Tables<"guests">[];
+  guest_payments: Tables<"guest_payments">[];
 };
 
 export const leadsCache = {
@@ -15,7 +16,7 @@ export async function listRegistrationsForEvent(
   const supabase = createClient();
   const { data, error } = await supabase
     .from("registrations")
-    .select("*, guests(*)")
+    .select("*, guests(*), guest_payments(*)")
     .eq("event_id", eventId)
     .order("created_at", { ascending: false });
 
