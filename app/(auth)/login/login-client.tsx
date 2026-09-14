@@ -55,6 +55,15 @@ export function LoginClient() {
     if (oauthError) setError(oauthError.message);
   }
 
+  // Gap fix: Google/Facebook aren't enabled as providers in this Supabase
+  // project yet (confirmed via auth logs: "provider is not enabled", a
+  // 400 on /authorize) -- showing buttons that always fail is worse than
+  // no buttons. Flip NEXT_PUBLIC_OAUTH_ENABLED=true once both are
+  // configured under Authentication > Providers in the Supabase
+  // dashboard (needs real OAuth app credentials, which only the project
+  // owner can create).
+  const oauthEnabled = process.env.NEXT_PUBLIC_OAUTH_ENABLED === "true";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
       <div className="w-full max-w-sm space-y-6">
@@ -108,20 +117,24 @@ export function LoginClient() {
               </Button>
             </form>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Separator className="flex-1" />
-              or
-              <Separator className="flex-1" />
-            </div>
+            {oauthEnabled && (
+              <>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Separator className="flex-1" />
+                  or
+                  <Separator className="flex-1" />
+                </div>
 
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={() => handleOAuth("google")}>
-                Continue with Google
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => handleOAuth("facebook")}>
-                Continue with Facebook
-              </Button>
-            </div>
+                <div className="space-y-2">
+                  <Button variant="outline" className="w-full" onClick={() => handleOAuth("google")}>
+                    Continue with Google
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => handleOAuth("facebook")}>
+                    Continue with Facebook
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
