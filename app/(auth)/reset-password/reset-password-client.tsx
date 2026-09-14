@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -10,16 +10,55 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// Reached after auth/callback exchanges a password-recovery link's code
-// for a real (recovery-scoped) session -- supabase.auth.updateUser here
-// sets the new password directly, since the session itself is the proof
-// of identity at this point (no separate token needed).
+// Reached either:
+//  (a) with ?code=... still unexchanged -- auth/callback deliberately
+//      forwards the recovery code here rather than exchanging it itself,
+//      because that route is exactly what email link scanners
+//      (Gmail/Outlook "Safe Links") pre-fetch in the background before
+//      the user opens the email, which would silently burn the
+//      one-time-use code before the user's real click. Confirmed live
+//      via Supabase auth logs: a "One-time token not found" / PKCE
+//      verifier mismatch on a link the user had genuinely only clicked
+//      once.
+//  (b) with an already-active session (the exchange below succeeded on
+//      a previous render, or the user is just changing their password
+//      while logged in) -- goes straight to the password form.
+// Gating the exchange behind an explicit "Continue" click means only a
+// real human visit can ever consume the code.
 export function ResetPasswordClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const code = searchParams.get("code");
+
+  const [sessionReady, setSessionReady] = useState(!code);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  async function handleContinue() {
+    if (!code) return;
+    setConfirming(true);
+    setConfirmError(null);
+
+    const supabase = createClient();
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    setConfirming(false);
+
+    if (exchangeError) {
+      setConfirmError(
+        exchangeError.message.toLowerCase().includes("verifier")
+          ? "This link was opened in a different browser than the one you requested it from. Please request a new reset link and open it in that same browser."
+          : "This link is invalid or has expired. Please request a new one."
+      );
+      return;
+    }
+
+    setSessionReady(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +81,38 @@ export function ResetPasswordClient() {
 
     router.push("/dashboard");
     router.refresh();
+  }
+
+  if (!sessionReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <KeyRound className="size-5" />
+            </span>
+            <h1 className="text-xl font-semibold tracking-tight">Reset your password</h1>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Confirm it&apos;s you</CardTitle>
+              <CardDescription>Click below to continue resetting your password.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {confirmError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{confirmError}</AlertDescription>
+                </Alert>
+              )}
+              <Button onClick={handleContinue} disabled={confirming} className="w-full">
+                {confirming ? "Confirming..." : "Continue"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (

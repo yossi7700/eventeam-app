@@ -23,7 +23,15 @@ export function ForgotPasswordClient() {
 
     const supabase = createClient();
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      // Points at an intermediate confirmation page (not the exchanging
+      // /auth/callback route directly) -- see reset-password-client.tsx
+      // for why: email link scanners (Gmail/Outlook safe-links) pre-fetch
+      // links in the background, which would silently burn the one-time
+      // PKCE code before the user ever clicks it if that fetch hit the
+      // exchange endpoint. Landing on a static page first, with the
+      // actual exchange gated behind a real button click, is Supabase's
+      // documented fix for this.
+      redirectTo: `${window.location.origin}/reset-password/confirm`,
     });
 
     setSubmitting(false);
